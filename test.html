@@ -1,1 +1,59 @@
 demo project
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apigee Certs Table</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; }
+    h2 { margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+    th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+    th { background: #003366; color: #fff; }
+    tr:hover { background: #f0f8ff; }
+  </style>
+</head>
+<body>
+  <h2>Apigee Certificates Overview</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Environment</th>
+        <th>Organization</th>
+        <th>Certificate Name</th>
+        <th>Common Name</th>
+        <th>Expiry</th>
+        <th>Additional Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>dev1</td>
+        <td>pbwm-nam-assisted</td>
+        <td>Citi Device CA1 G2 DEV</td>
+        <td>Citi Device CA1 G2 DEV</td>
+        <td>in 6 years</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>dev1</td>
+        <td>pbwm-nam-assisted</td>
+        <td>Citi Device CA1 G2 UAT</td>
+        <td>Citi Root CA G2 UAT</td>
+        <td>in 1 month</td>
+        <td>Expiring soon</td>
+      </tr>
+      <tr>
+        <td>dev1</td>
+        <td>pbwm-nam-assisted</td>
+        <td>digital-api-client-gm-pcf</td>
+        <td>psg-mtls-test.nam.nsroot.net</td>
+        <td>in 4 months</td>
+        <td>-</td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>
