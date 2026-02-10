@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PSG Origin Whitelisting</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f9;
+  padding: 20px;
+}
+
+.container {
+  max-width: 960px;
+  margin: auto;
+  background: #fff;
+  padding: 24px;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+h2 {
+  color: #0b5ed7;
+}
+
+.section {
+  margin-top: 30px;
+}
+
+label {
+  font-weight: bold;
+  margin-top: 10px;
+  display: block;
+}
+
+.help-text {
+  font-size: 13px;
+  color: #555;
+  margin-top: 4px;
+}
+
+.info {
+  background: #e7f3ff;
+  border-left: 4px solid #0b5ed7;
+  padding: 10px;
+  font-size: 13px;
+  margin: 12px 0;
+}
+
+.warning {
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  padding: 10px;
+  font-size: 13px;
+  margin: 12px 0;
+}
+
+.env-badge {
+  display: inline-block;
+  background: #dee2e6;
+  padding: 2px 8px;
+  margin-right: 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+input, select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 6px;
+}
+
+.origin-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.origin-row input {
+  flex: 1;
+}
+
+.origin-row button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.add-btn {
+  margin-top: 10px;
+  background: #198754;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.actions {
+  margin-top: 30px;
+  text-align: right;
+}
+
+.actions button {
+  padding: 8px 16px;
+  margin-left: 10px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* CSI Search Dropdown */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-list {
+  border: 1px solid #ccc;
+  max-height: 150px;
+  overflow-y: auto;
+  position: absolute;
+  width: 100%;
+  background: #fff;
+  z-index: 10;
+  display: none;
+}
+
+.dropdown-list div {
+  padding: 8px;
+  cursor: pointer;
+}
+
+.dropdown-list div:hover {
+  background: #f1f1f1;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>Ingress Origin Whitelisting – PSG</h2>
+  <p class="help-text">
+    Self-service portal to whitelist <b>application domains</b> for secure
+    communication with the Platform Security Gateway (PSG).
+    All changes are applied dynamically at runtime.
+  </p>
+
+  <!-- STEP 1 -->
+  <div class="section">
+    <h3>Step 1: Application Identification</h3>
+
+    <label>CSI (Client Service Identifier) *</label>
+    <div class="dropdown">
+      <input type="text" id="csiInput"
+             placeholder="Search or select CSI"
+             onkeyup="filterCSI()" onclick="showCSIList()">
+      <div id="csiList" class="dropdown-list"></div>
+    </div>
+
+    <input type="text" id="newCSI"
+           placeholder="Enter new CSI"
+           style="display:none;">
+
+    <div class="help-text">
+      CSI uniquely identifies your application in PSG.
+      If your CSI is not listed, select <b>Register New CSI</b> and enter a new one.
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="section">
+    <h3>Step 2: PSG Instance Selection</h3>
+
+    <label>Select PSG Instance(s) *</label>
+    <select multiple>
+      <option>psg-nonprod-ap-south</option>
+      <option>psg-nonprod-us-east</option>
+      <option>psg-prod-ap-south</option>
+    </select>
+
+    <div class="help-text">
+      Select the PSG instance(s) where your application is onboarded.
+      (Multiple selection allowed)
+    </div>
+  </div>
+
+  <!-- ORIGIN EXPLANATION -->
+  <div class="info">
+    <b>What is an Application Origin?</b><br>
+    An origin is the <b>application domain or hostname</b>
+    from which API requests are sent <b>to PSG</b>.
+    PSG will allow requests <b>only from the domains listed below</b>.
+    <br><br>
+    <b>Examples:</b><br>
+    • https://dev.myapp.company.com<br>
+    • https://uat.myapp.company.com<br>
+    • https://www.myapp.com
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="section">
+    <h3>Step 3: Non-Production Application Domains (Calling PSG)</h3>
+
+    <div class="info">
+      🧪 Applies to
+      <span class="env-badge">DEV</span>
+      <span class="env-badge">UAT</span>
+      <span class="env-badge">PERF</span>
+      environments.<br>
+      Each non-production domain requires <b>one-time approval by the CSI Manager</b>
+      before PSG access is enabled.
+    </div>
+
+    <div id="nonProdContainer"></div>
+    <button class="add-btn" onclick="addNonProd()">+ Add Another Non-Prod Domain</button>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="section">
+    <h3>Step 4: Production Application Domains (Calling PSG)</h3>
+
+    <div class="warning">
+      ⚠️ Production access is tightly controlled.<br>
+      Add only <b>live application domains</b> that will call PSG.
+      A valid <b>Change Request (CR)</b> is mandatory and will be validated automatically.
+    </div>
+
+    <div id="prodContainer"></div>
+    <button class="add-btn" onclick="addProd()">+ Add Another Prod Domain</button>
+
+    <label>Change Request (CR) Number *</label>
+    <input type="text" placeholder="e.g. CHG123456">
+
+    <div class="help-text">
+      This CR will be validated and applied to <b>all production domains</b>.
+      The CR must be in <b>Active / Implementation</b> stage
+      and linked to the selected CSI.
+    </div>
+
+    <div class="checkbox-row">
+      <input type="checkbox" id="prodConfirm">
+      <label for="prodConfirm">
+        I confirm this production change is approved, scheduled,
+        and linked to the selected CSI
+      </label>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="actions">
+    <button onclick="location.reload()">Reset</button>
+    <button onclick="submitForm()">Submit</button>
+  </div>
+</div>
+
+<script>
+const csiValues = [
+  "customer-ui",
+  "payments-api",
+  "loan-origination",
+  "➕ Register New CSI"
+];
+
+function showCSIList() {
+  document.getElementById("csiList").style.display = "block";
+  renderCSIList(csiValues);
+}
+
+function filterCSI() {
+  const value = document.getElementById("csiInput").value.toLowerCase();
+  renderCSIList(csiValues.filter(c => c.toLowerCase().includes(value)));
+}
+
+function renderCSIList(items) {
+  const list = document.getElementById("csiList");
+  list.innerHTML = "";
+  items.forEach(item => {
+    const div = document.createElement("div");
+    div.textContent = item;
+    div.onclick = () => selectCSI(item);
+    list.appendChild(div);
+  });
+}
+
+function selectCSI(value) {
+  document.getElementById("csiInput").value = value;
+  document.getElementById("csiList").style.display = "none";
+  document.getElementById("newCSI").style.display =
+    value.includes("Register") ? "block" : "none";
+}
+
+function addNonProd() {
+  const div = document.createElement("div");
+  div.className = "origin-row";
+  div.innerHTML = `
+    <input type="text" placeholder="https://dev.example.com">
+    <button onclick="this.parentElement.remove()">Remove</button>
+  `;
+  document.getElementById("nonProdContainer").appendChild(div);
+}
+
+function addProd() {
+  const div = document.createElement("div");
+  div.className = "origin-row";
+  div.innerHTML = `
+    <input type="text" placeholder="https://www.example.com">
+    <button onclick="this.parentElement.remove()">Remove</button>
+  `;
+  document.getElementById("prodContainer").appendChild(div);
+}
+
+function submitForm() {
+  alert(
+    "Request submitted successfully!\n\n" +
+    "• Non-Prod domains sent for CSI Manager approval\n" +
+    "• Production domains validated via Change Request\n" +
+    "• PSG configuration updated dynamically"
+  );
+}
+
+addNonProd();
+addProd();
+</script>
+
+</body>
+</html>
