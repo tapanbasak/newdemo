@@ -1,0 +1,14 @@
+/* Prompt Catch Up — Theme Variables */
+:root {
+  --pcu-navy: #0a1929;
+  --pcu-blue: #1976d2;
+  --pcu-gold: #f9a825;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: "Roboto", "Helvetica Neue", sans-serif;
+  background: #f5f7fa;
+  color: #263238;
+}

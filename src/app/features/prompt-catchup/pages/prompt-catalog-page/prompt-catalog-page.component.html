@@ -1,0 +1,85 @@
+<div class="catalog-page" *ngIf="catalog() as data">
+  <div class="catalog-sidebar">
+    <div class="sidebar-search">
+      <input
+        type="text"
+        class="sidebar-search-input"
+        placeholder="Search for Prompts"
+      />
+    </div>
+
+    <nav class="sidebar-nav">
+      <a [routerLink]="['/prompt-catchup']" class="sidebar-link">Home</a>
+      <a href="javascript:void(0)" class="sidebar-link">Share your Prompt</a>
+    </nav>
+
+    <div class="prompt-list">
+      <h4 class="prompt-list-heading">Prompts</h4>
+      <ul>
+        <li
+          *ngFor="let prompt of data.prompts"
+          class="prompt-list-item"
+        >
+          {{ prompt.title }}
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="catalog-main">
+    <header class="catalog-header">
+      <h1 class="catalog-title">{{ data.title }}</h1>
+      <p class="catalog-subtitle">{{ data.subtitle }}</p>
+      <div class="catalog-meta">
+        <span>{{ data.totalPrompts }} Prompts Found</span>
+      </div>
+    </header>
+
+    <section class="catalog-controls">
+      <label class="toggle-certified">
+        <input
+          type="checkbox"
+          [checked]="showCertifiedOnly()"
+          (change)="toggleCertified($any($event.target).checked)"
+        />
+        <span>Show Certified Prompts</span>
+      </label>
+    </section>
+
+    <section class="catalog-table">
+      <div class="table-header row">
+        <div class="col col-title">Prompt Title</div>
+        <div class="col col-prompt">Prompt</div>
+        <div class="col col-upvotes">Upvotes</div>
+        <div class="col col-author">Author</div>
+      </div>
+
+      <div
+        class="table-row row"
+        *ngFor="let prompt of filteredPrompts()"
+      >
+        <div class="col col-title">
+          <div class="prompt-title">{{ prompt.title }}</div>
+          <div class="prompt-certified" *ngIf="prompt.certified">
+            Certified
+          </div>
+        </div>
+        <div class="col col-prompt">
+          <button class="run-prompt-btn">Run Prompt</button>
+          <p class="prompt-text">
+            {{ prompt.description }}
+          </p>
+        </div>
+        <div class="col col-upvotes">
+          <span class="upvote-pill">
+            {{ prompt.upvotes }} Upvotes
+          </span>
+        </div>
+        <div class="col col-author">
+          {{ prompt.author }}
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+

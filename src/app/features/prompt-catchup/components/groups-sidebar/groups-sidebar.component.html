@@ -1,0 +1,25 @@
+<aside class="sidebar">
+  <h3 class="sidebar-heading">Groups</h3>
+  <div class="group-chips">
+    @for (group of groups; track group.slug) {
+      <button
+        class="group-chip"
+        [class.active]="selectedGroup === group.slug"
+        (click)="selectGroup(group.slug)"
+      >
+        {{ group.name }}
+        <span class="chip-count">{{ group.count }}</span>
+      </button>
+    }
+  </div>
+
+  @if (links.length) {
+    <div class="sidebar-links">
+      @for (link of links; track link.label) {
+        <a href="javascript:void(0)" class="sidebar-link">
+          {{ link.label }}
+        </a>
+      }
+    </div>
+  }
+</aside>

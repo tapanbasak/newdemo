@@ -1,0 +1,41 @@
+{
+  "name": "ng-app",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "^19.2.18",
+    "@angular/cdk": "^19.2.19",
+    "@angular/common": "^19.2.18",
+    "@angular/compiler": "^19.2.18",
+    "@angular/core": "^19.2.18",
+    "@angular/forms": "^19.2.18",
+    "@angular/material": "^19.2.19",
+    "@angular/platform-browser": "^19.2.18",
+    "@angular/platform-browser-dynamic": "^19.2.18",
+    "@angular/router": "^19.2.18",
+    "@popperjs/core": "^2.11.8",
+    "@softarc/native-federation-node": "^2.0.10",
+    "bootstrap": "^5.3.3",
+    "es-module-shims": "^1.5.12",
+    "rxjs": "~7.8.1",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.1"
+  },
+  "devDependencies": {
+    "@angular-architects/native-federation": "^19.0.23",
+    "@angular-devkit/build-angular": "^19.2.19",
+    "@angular/build": "^19.2.19",
+    "@angular/cli": "^19.2.19",
+    "@angular/compiler-cli": "^19.2.18",
+    "@types/jasmine": "~3.10.0",
+    "jasmine-core": "~4.0.0",
+    "typescript": "~5.7.2"
+  }
+}

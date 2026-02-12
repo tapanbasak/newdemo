@@ -1,0 +1,28 @@
+<app-banner />
+
+<div class="container-fluid page-body">
+  <app-scoreboard />
+
+  <div class="row g-4">
+    <!-- Sidebar -->
+    <div class="col-12 col-md-3 col-lg-2">
+      <app-groups-sidebar
+        [groups]="groups()"
+        [selectedGroup]="selectedGroup()"
+        [links]="sidebarLinks()"
+        (groupSelected)="onGroupSelected($event)"
+      />
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-12 col-md-9 col-lg-10">
+      <app-search-filter-bar
+        (searchChanged)="onSearchChanged($event)"
+        (statusChanged)="onStatusChanged($event)"
+        (sortChanged)="onSortChanged($event)"
+        (clearAll)="onClearAll()"
+      />
+      <app-agent-grid [agents]="filteredAgents()" />
+    </div>
+  </div>
+</div>

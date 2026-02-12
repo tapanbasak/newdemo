@@ -1,0 +1,7 @@
+<div class="row g-3">
+  @for (board of scoreboards; track board.title) {
+    <div class="col-12 col-md-4">
+      <app-scoreboard-card [data]="board" />
+    </div>
+  }
+</div>
