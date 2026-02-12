@@ -47,10 +47,10 @@ export const GROUPS: Group[] = [
 ];
 
 export const SIDEBAR_LINKS: SidebarLink[] = [
-  { label: 'Share your Prompt', icon: 'share' },
-  { label: 'Add your Agent', icon: 'add_circle' },
-  { label: 'About', icon: 'info' },
-  { label: 'FAQ', icon: 'help' },
+  { label: 'Share your Prompt', route: ['/prompt-catchup/share'] },
+  { label: 'Add your Agent' },
+  { label: 'About' },
+  { label: 'FAQ' },
 ];
 
 export const AGENTS: Agent[] = [

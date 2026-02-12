@@ -9,11 +9,14 @@ import {
   SidebarLink,
   SortBy,
   PromptCatalog,
+  SharedPrompt,
 } from '../models/prompt-catchup.models';
 import { AGENTS, GROUPS, SCOREBOARD_DATA, SIDEBAR_LINKS } from '../data/prompt-catchup.data';
 
 @Injectable({ providedIn: 'root' })
 export class PromptCatchupService {
+  private readonly SHARED_PROMPTS_KEY = 'pcu_shared_prompts';
+
   constructor(private http: HttpClient) {}
 
   getScoreboards(): Observable<ScoreboardCardData[]> {
@@ -21,7 +24,11 @@ export class PromptCatchupService {
   }
 
   getGroups(): Observable<Group[]> {
-    return of(GROUPS);
+    const extra = this.getSharedPrompts().length;
+    const groups = GROUPS.map((g) =>
+      g.slug === 'my-upvotes' ? { ...g, count: g.count + extra } : g
+    );
+    return of(groups);
   }
 
   getSidebarLinks(): Observable<SidebarLink[]> {
@@ -36,8 +43,57 @@ export class PromptCatchupService {
     return this.http
       .get<PromptCatalog[]>('/assets/prompt-catalog-sample.json')
       .pipe(
-        map((list) => list.find((c) => c.agentId === agentId) ?? list[0])
+        map((list) => {
+          const base = list.find((c) => c.agentId === agentId) ?? list[0];
+          const shared = this.getSharedPrompts();
+
+          const sharedItems: PromptCatalog['prompts'] = shared.map(
+            (p, index) => ({
+              id: 1000 + index,
+              title: p.title,
+              description: p.prompt,
+              certified: false,
+              upvotes: 0,
+              author: p.createdBy,
+            })
+          );
+
+          return {
+            ...base,
+            totalPrompts: base.totalPrompts + sharedItems.length,
+            prompts: [...base.prompts, ...sharedItems],
+          };
+        })
       );
+  }
+
+  addSharedPrompt(prompt: SharedPrompt): void {
+    const current = this.getSharedPrompts();
+    current.push({ ...prompt });
+    try {
+      localStorage.setItem(this.SHARED_PROMPTS_KEY, JSON.stringify(current));
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  getSharedPrompts(): SharedPrompt[] {
+    if (typeof localStorage === 'undefined') {
+      return [];
+    }
+    try {
+      const raw = localStorage.getItem(this.SHARED_PROMPTS_KEY);
+      if (!raw) {
+        return [];
+      }
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed as SharedPrompt[];
+      }
+      return [];
+    } catch {
+      return [];
+    }
   }
 
   filterAgents(

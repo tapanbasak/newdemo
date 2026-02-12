@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { Group, SidebarLink } from '../../models/prompt-catchup.models';
 
 @Component({
@@ -14,7 +15,17 @@ export class GroupsSidebarComponent {
   @Input() links: SidebarLink[] = [];
   @Output() groupSelected = new EventEmitter<string>();
 
+  private router = inject(Router);
+
   selectGroup(slug: string): void {
     this.groupSelected.emit(slug);
+  }
+
+  navigate(link: SidebarLink, event: MouseEvent): void {
+    if (!link.route) {
+      return;
+    }
+    event.preventDefault();
+    this.router.navigate(link.route);
   }
 }

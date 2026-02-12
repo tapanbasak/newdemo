@@ -32,6 +32,7 @@ export interface Agent {
 export interface SidebarLink {
   label: string;
   icon?: string;
+  route?: any[];
 }
 
 export type RecommendStatus = 'all' | 'adopt' | 'under_evaluation';
@@ -53,4 +54,14 @@ export interface PromptCatalog {
   subtitle: string;
   totalPrompts: number;
   prompts: PromptCatalogItem[];
+}
+
+export interface SharedPrompt {
+  title: string;
+  createdBy: string;
+  createdBySoeid: string;
+  audience: string;
+  prompt: string;
+  description: string;
+  attachments?: string;
 }
