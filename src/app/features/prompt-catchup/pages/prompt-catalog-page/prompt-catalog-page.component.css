@@ -64,6 +64,29 @@
   padding: 1.25rem 1.5rem;
 }
 
+.breadcrumb {
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin: 0.75rem 1.5rem 0.5rem;
+}
+
+.breadcrumb a {
+  color: #1e40af;
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-separator {
+  margin: 0 0.25rem;
+}
+
+.breadcrumb-current {
+  color: #0f172a;
+}
+
 .catalog-header {
   margin-bottom: 1rem;
 }
@@ -152,9 +175,20 @@
   display: inline-block;
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
+  border: none;
   background-color: #0f172a;
   color: #e5e7eb;
   font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.upvote-pill:hover {
+  background-color: #1e293b;
+}
+
+.upvote-pill.upvoted {
+  background-color: #15803d;
+  color: #fff;
 }
 
 .col-author {

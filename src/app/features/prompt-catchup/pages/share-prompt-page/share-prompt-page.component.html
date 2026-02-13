@@ -1,82 +1,138 @@
-<div class="share-page">
-  <aside class="share-sidebar">
-    <div class="sidebar-search">
-      <input
-        type="text"
-        class="sidebar-search-input"
-        placeholder="Search for Prompts"
-      />
-    </div>
-    <nav class="sidebar-nav">
-      <a [routerLink]="['/prompt-catchup/share']" class="sidebar-link active">
-        Share your Prompt
-      </a>
-      <a [routerLink]="['/prompt-catchup']" class="sidebar-link">Home</a>
-    </nav>
-  </aside>
+<div>
+  <nav class="breadcrumb">
+    <a [routerLink]="['/prompt-catchup']">Prompt Catch Up</a>
+    <span class="breadcrumb-separator">/</span>
+    <span class="breadcrumb-current">Share Your Prompt</span>
+  </nav>
 
-  <main class="share-main">
-    <h1 class="page-title">Share Your Prompt</h1>
+  <div class="share-page">
+    <aside class="share-sidebar">
+      <div class="sidebar-search">
+        <input
+          type="text"
+          class="sidebar-search-input"
+          placeholder="Search for Prompts"
+        />
+      </div>
+      <nav class="sidebar-nav">
+        <a [routerLink]="['/prompt-catchup/share']" class="sidebar-link active">
+          Share your Prompt
+        </a>
+        <a [routerLink]="['/prompt-catchup']" class="sidebar-link">Home</a>
+      </nav>
+    </aside>
 
-    <section class="section">
-      <h2 class="section-title">Basic Information</h2>
+    <main class="share-main">
+      <h1 class="page-title">Share Your Prompt</h1>
 
-      <form [formGroup]="form" (ngSubmit)="submit()">
-        <div class="grid-row">
+      <section class="section">
+        <h2 class="section-title">Basic Information</h2>
+
+        <form [formGroup]="form" (ngSubmit)="submit()">
+          <div class="grid-row">
+            <div class="field">
+              <label>Title</label>
+              <input type="text" formControlName="title" />
+            </div>
+            <div class="field">
+              <label>Created by</label>
+              <input type="text" formControlName="createdBy" />
+            </div>
+            <div class="field">
+              <label>Created by SOEID</label>
+              <input type="text" formControlName="createdBySoeid" />
+            </div>
+          </div>
+
+          <div class="grid-row">
+            <div class="field wide">
+              <label>Who could make use of this Prompt? (e.g., roles, agents)</label>
+              <div class="audience-section">
+                <div class="audience-tags">
+                  <label
+                    class="audience-chip group-chip"
+                    *ngFor="let g of audienceGroups"
+                  >
+                    <input
+                      type="checkbox"
+                      [checked]="isAudienceSelected(g.slug)"
+                      (change)="onAudienceToggle(g.slug, $event)"
+                    />
+                    {{ g.name }}
+                  </label>
+                </div>
+
+                <!-- Show sub-groups only for groups that are selected -->
+                <ng-container *ngFor="let g of audienceGroups">
+                  <div
+                    class="sub-groups"
+                    *ngIf="isAudienceSelected(g.slug) && getAgentsForGroup(g.slug).length > 0"
+                  >
+                    <div
+                      class="sub-group-header"
+                      (click)="toggleGroupExpanded(g.slug)"
+                    >
+                      <span class="expand-icon">
+                        {{ isGroupExpanded(g.slug) ? '▼' : '▶' }}
+                      </span>
+                      <span>{{ g.name }} ></span>
+                    </div>
+                    <div
+                      class="sub-group-items"
+                      *ngIf="isGroupExpanded(g.slug)"
+                    >
+                      <label
+                        class="audience-chip sub-chip"
+                        *ngFor="let agent of getAgentsForGroup(g.slug)"
+                      >
+                        <input
+                          type="checkbox"
+                          [checked]="isAudienceSelected('agent:' + agent.id)"
+                          (change)="onAudienceToggle('agent:' + agent.id, $event)"
+                        />
+                        {{ agent.name }}
+                      </label>
+                    </div>
+                  </div>
+                </ng-container>
+              </div>
+            </div>
+            <div class="field">
+              <label>Attachments</label>
+              <input
+                type="file"
+                multiple
+                (change)="onAttachmentsSelected($event)"
+              />
+            </div>
+          </div>
+
           <div class="field">
-            <label>Title</label>
-            <input type="text" formControlName="title" />
+            <label>Prompt</label>
+            <textarea
+              rows="4"
+              formControlName="prompt"
+              placeholder='Please ensure to define the variable fields with \"[]\" for \"template\" format prompts'
+            ></textarea>
           </div>
+
           <div class="field">
-            <label>Created by</label>
-            <input type="text" formControlName="createdBy" />
+            <label>Description</label>
+            <textarea
+              rows="3"
+              formControlName="description"
+              placeholder="How it works, how to use it, and how to get the most from it."
+            ></textarea>
           </div>
-          <div class="field">
-            <label>Created by SOEID</label>
-            <input type="text" formControlName="createdBySoeid" />
+
+          <div class="submit-row">
+            <button type="submit" class="submit-btn">
+              Submit
+            </button>
           </div>
-        </div>
-
-        <div class="grid-row">
-          <div class="field wide">
-            <label>Who could make use of this Prompt? (e.g., roles, agents)</label>
-            <input type="text" formControlName="audience" />
-          </div>
-          <div class="field">
-            <label>Attachments</label>
-            <select formControlName="attachments">
-              <option value="">None</option>
-              <option value="doc">Design Doc</option>
-              <option value="sop">SOP</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Prompt</label>
-          <textarea
-            rows="4"
-            formControlName="prompt"
-            placeholder='Please ensure to define the variable fields with "[]" for "template" format prompts'
-          ></textarea>
-        </div>
-
-        <div class="field">
-          <label>Description</label>
-          <textarea
-            rows="3"
-            formControlName="description"
-            placeholder="How it works, how to use it, and how to get the most from it."
-          ></textarea>
-        </div>
-
-        <div class="submit-row">
-          <button type="submit" class="submit-btn">
-            Submit
-          </button>
-        </div>
-      </form>
-    </section>
-  </main>
+        </form>
+      </section>
+    </main>
+  </div>
 </div>
 

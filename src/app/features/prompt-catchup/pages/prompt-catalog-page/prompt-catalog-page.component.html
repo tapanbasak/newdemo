@@ -1,5 +1,12 @@
-<div class="catalog-page" *ngIf="catalog() as data">
-  <div class="catalog-sidebar">
+<div *ngIf="catalog() as data">
+  <nav class="breadcrumb">
+    <a [routerLink]="['/prompt-catchup']">Prompt Catch Up</a>
+    <span class="breadcrumb-separator">/</span>
+    <span class="breadcrumb-current">{{ data.title }}</span>
+  </nav>
+
+  <div class="catalog-page">
+    <div class="catalog-sidebar">
     <div class="sidebar-search">
       <input
         type="text"
@@ -24,10 +31,10 @@
         </li>
       </ul>
     </div>
-  </div>
+    </div>
 
-  <div class="catalog-main">
-    <header class="catalog-header">
+    <div class="catalog-main">
+      <header class="catalog-header">
       <h1 class="catalog-title">{{ data.title }}</h1>
       <p class="catalog-subtitle">{{ data.subtitle }}</p>
       <div class="catalog-meta">
@@ -67,19 +74,25 @@
         <div class="col col-prompt">
           <button class="run-prompt-btn">Run Prompt</button>
           <p class="prompt-text">
-            {{ prompt.description }}
+            {{ prompt.prompt || prompt.description }}
           </p>
         </div>
         <div class="col col-upvotes">
-          <span class="upvote-pill">
+          <button
+            type="button"
+            class="upvote-pill"
+            [class.upvoted]="hasUpvoted(prompt)"
+            (click)="onUpvote(prompt)"
+          >
             {{ prompt.upvotes }} Upvotes
-          </span>
+          </button>
         </div>
         <div class="col col-author">
           {{ prompt.author }}
         </div>
       </div>
     </section>
+    </div>
   </div>
 </div>
 

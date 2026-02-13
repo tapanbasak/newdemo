@@ -42,6 +42,8 @@ export type SortBy = 'most_prompts' | 'newest' | 'alphabetical';
 export interface PromptCatalogItem {
   id: number;
   title: string;
+  // Actual prompt text to run (optional for legacy data)
+  prompt?: string;
   description: string;
   certified: boolean;
   upvotes: number;

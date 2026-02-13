@@ -13,6 +13,18 @@ import {
 } from '../models/prompt-catchup.models';
 import { AGENTS, GROUPS, SCOREBOARD_DATA, SIDEBAR_LINKS } from '../data/prompt-catchup.data';
 
+const MY_UPVOTES_KEY = 'pcu_my_upvotes';
+const PROMPT_UPVOTES_KEY = 'pcu_prompt_upvotes';
+
+export interface MyUpvoteEntry {
+  agentId: number;
+  promptId: number;
+  title?: string;
+  description?: string;
+  author?: string;
+  upvotes?: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PromptCatchupService {
   private readonly SHARED_PROMPTS_KEY = 'pcu_shared_prompts';
@@ -24,9 +36,9 @@ export class PromptCatchupService {
   }
 
   getGroups(): Observable<Group[]> {
-    const extra = this.getSharedPrompts().length;
+    const myUpvotesCount = this.getMyUpvotes().length;
     const groups = GROUPS.map((g) =>
-      g.slug === 'my-upvotes' ? { ...g, count: g.count + extra } : g
+      g.slug === 'my-upvotes' ? { ...g, count: myUpvotesCount } : g
     );
     return of(groups);
   }
@@ -47,24 +59,105 @@ export class PromptCatchupService {
           const base = list.find((c) => c.agentId === agentId) ?? list[0];
           const shared = this.getSharedPrompts();
 
-          const sharedItems: PromptCatalog['prompts'] = shared.map(
+          // Only include shared prompts that are tagged for this agent
+          const sharedForAgent = shared.filter((p) => {
+            const audience = (p.audience ?? '')
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean);
+            return audience.includes(`agent:${agentId}`);
+          });
+
+          const sharedItems: PromptCatalog['prompts'] = sharedForAgent.map(
             (p, index) => ({
               id: 1000 + index,
               title: p.title,
-              description: p.prompt,
+              prompt: p.prompt,
+              description: p.description || p.prompt,
               certified: false,
               upvotes: 0,
               author: p.createdBy,
             })
           );
 
+          const prompts = [...base.prompts, ...sharedItems].map((p) => ({
+            ...p,
+            upvotes:
+              this.getStoredUpvoteCount(base.agentId, p.id) ?? p.upvotes,
+          }));
           return {
             ...base,
             totalPrompts: base.totalPrompts + sharedItems.length,
-            prompts: [...base.prompts, ...sharedItems],
+            prompts,
           };
         })
       );
+  }
+
+  getMyUpvotes(): MyUpvoteEntry[] {
+    if (typeof localStorage === 'undefined') return [];
+    try {
+      const raw = localStorage.getItem(MY_UPVOTES_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? (parsed as MyUpvoteEntry[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  getStoredUpvoteCount(agentId: number, promptId: number): number | undefined {
+    if (typeof localStorage === 'undefined') return undefined;
+    try {
+      const raw = localStorage.getItem(PROMPT_UPVOTES_KEY);
+      if (!raw) return undefined;
+      const obj = JSON.parse(raw) as Record<string, number>;
+      const key = `${agentId}_${promptId}`;
+      return obj[key];
+    } catch {
+      return undefined;
+    }
+  }
+
+  upvotePrompt(
+    agentId: number,
+    promptId: number,
+    currentCount: number,
+    details?: { title: string; description: string; author: string }
+  ): void {
+    const myUpvotes = this.getMyUpvotes();
+    const key = `${agentId}_${promptId}`;
+    if (myUpvotes.some((e) => e.agentId === agentId && e.promptId === promptId)) {
+      return;
+    }
+    const newCount = currentCount + 1;
+    myUpvotes.push({
+      agentId,
+      promptId,
+      title: details?.title,
+      description: details?.description,
+      author: details?.author,
+      upvotes: newCount,
+    });
+    try {
+      localStorage.setItem(MY_UPVOTES_KEY, JSON.stringify(myUpvotes));
+    } catch {
+      // ignore
+    }
+    const raw = localStorage.getItem(PROMPT_UPVOTES_KEY);
+    const counts = raw ? (JSON.parse(raw) as Record<string, number>) : {};
+    counts[key] = newCount;
+    try {
+      localStorage.setItem(PROMPT_UPVOTES_KEY, JSON.stringify(counts));
+    } catch {
+      // ignore
+    }
+  }
+
+  hasUpvoted(agentId: number, promptId: number): boolean {
+    return this.getMyUpvotes().some(
+      (e) => e.agentId === agentId && e.promptId === promptId
+    );
   }
 
   addSharedPrompt(prompt: SharedPrompt): void {
@@ -105,7 +198,7 @@ export class PromptCatchupService {
   ): Agent[] {
     let result = [...agents];
 
-    if (groupSlug && groupSlug !== 'agents') {
+    if (groupSlug) {
       result = result.filter((a) => a.category === groupSlug);
     }
 

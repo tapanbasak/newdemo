@@ -16,13 +16,81 @@
 
     <!-- Main Content -->
     <div class="col-12 col-md-9 col-lg-10">
-      <app-search-filter-bar
-        (searchChanged)="onSearchChanged($event)"
-        (statusChanged)="onStatusChanged($event)"
-        (sortChanged)="onSortChanged($event)"
-        (clearAll)="onClearAll()"
-      />
-      <app-agent-grid [agents]="filteredAgents()" />
+      @if (selectedGroup() === 'my-upvotes') {
+        <div class="my-upvotes-view">
+          <div class="prompts-filter-bar">
+            <div class="prompts-search-field">
+              <label>Search for Prompts</label>
+              <input
+                type="text"
+                [value]="promptSearch()"
+                (input)="onPromptSearchChanged($any($event.target).value)"
+                placeholder="Prompt Search..."
+              />
+            </div>
+            <div class="prompts-sort-field">
+              <label>Sort by</label>
+              <select>
+                <option>Most Upvotes</option>
+                <option>Newest</option>
+              </select>
+            </div>
+            <button type="button" class="clear-all-btn" (click)="onClearMyUpvotesFilters()">
+              Clear all
+            </button>
+          </div>
+          <section class="prompts-controls">
+            <label class="toggle-certified">
+              <input
+                type="checkbox"
+                [checked]="showCertifiedOnly()"
+                (change)="toggleCertified($any($event.target).checked)"
+              />
+              <span>Show Certified Prompts</span>
+            </label>
+          </section>
+          <section class="prompts-table">
+            <div class="prompts-table-header row">
+              <div class="col col-title">Prompt Title</div>
+              <div class="col col-prompt">Prompt</div>
+              <div class="col col-upvotes">Upvotes</div>
+              <div class="col col-author">Author</div>
+            </div>
+            @if (filteredMyUpvotesPrompts().length) {
+              @for (row of filteredMyUpvotesPrompts(); track row.title) {
+                <div class="prompts-table-row row">
+                  <div class="col col-title">
+                    <div class="prompt-title">{{ row.title }}</div>
+                    @if (row.certified) {
+                      <div class="prompt-certified">Certified</div>
+                    }
+                  </div>
+                  <div class="col col-prompt">
+                    <button type="button" class="run-prompt-btn">Run Prompt</button>
+                    <p class="prompt-text">{{ row.description }}</p>
+                  </div>
+                  <div class="col col-upvotes">
+                    <span class="upvote-pill">{{ row.upvotes }} Upvotes</span>
+                  </div>
+                  <div class="col col-author">{{ row.author }}</div>
+                </div>
+              }
+            } @else {
+              <div class="prompts-empty">
+                No prompts match your filters. Share a prompt or adjust filters.
+              </div>
+            }
+          </section>
+        </div>
+      } @else {
+        <app-search-filter-bar
+          (searchChanged)="onSearchChanged($event)"
+          (statusChanged)="onStatusChanged($event)"
+          (sortChanged)="onSortChanged($event)"
+          (clearAll)="onClearAll()"
+        />
+        <app-agent-grid [agents]="filteredAgents()" />
+      }
     </div>
   </div>
 </div>

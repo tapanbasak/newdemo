@@ -45,6 +45,29 @@
   padding: 1.25rem 1.5rem;
 }
 
+.breadcrumb {
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin: 0.75rem 1.5rem 0.5rem;
+}
+
+.breadcrumb a {
+  color: #1e40af;
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-separator {
+  margin: 0 0.25rem;
+}
+
+.breadcrumb-current {
+  color: #0f172a;
+}
+
 .page-title {
   font-size: 1.5rem;
   margin-bottom: 1rem;
@@ -71,6 +94,73 @@
 
 .field.wide {
   grid-column: span 2;
+}
+
+.audience-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.audience-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.audience-chip {
+  font-size: 0.8125rem;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  background-color: #f8fafc;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.audience-chip.group-chip {
+  background-color: #e0e7ff;
+  border-color: #6366f1;
+}
+
+.audience-chip.sub-chip {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  margin-left: 1.5rem;
+}
+
+.audience-chip input {
+  margin: 0;
+}
+
+.sub-groups {
+  margin-top: 0.5rem;
+}
+
+.sub-group-header {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0;
+}
+
+.expand-icon {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.sub-group-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  margin-left: 0.5rem;
 }
 
 label {

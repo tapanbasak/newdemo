@@ -8,6 +8,7 @@
       {
         "id": 1,
         "title": "Generate CSC KPI for Work Effort",
+        "prompt": "Review the Desired Outcomes and Project Objectives, then propose CSC, KPI, KPI value type, and KPI target date for this work effort.",
         "description": "As a Project Manager, review the Desired Outcome(s) and Project Objective(s) to generate CSC, KPI, KPI Value Type, and KPI Target Date for the work effort. Use this prompt to structure measurable items that can be tracked throughout the project lifecycle.",
         "certified": true,
         "upvotes": 26,
@@ -16,12 +17,134 @@
       {
         "id": 2,
         "title": "Review CSC KPI and Refine Project Description for Projects",
+        "prompt": "Given an existing project description and KPIs, identify gaps and suggest refined wording for the CSC KPIs and project description.",
         "description": "CSC is Critical Success Criteria; this prompt helps validate that measurable terms of what must be done for the work effort to be considered successful are clearly defined and aligned with project objectives.",
         "certified": true,
         "upvotes": 13,
         "author": "Rathinam, Archana [TECH]"
       }
     ]
+  },
+  {
+    "agentId": 5,
+    "title": "Release Engineering Agent Prompt Catalog",
+    "subtitle": "Automates release pipelines, version management, and deployment artifact generation.",
+    "totalPrompts": 42,
+    "prompts": [
+      {
+        "id": 1,
+        "title": "Write User Story from Feature Brief",
+        "prompt": "From this feature brief and acceptance criteria, draft a user story in the format: As a [role], I want [goal] so that [benefit], plus acceptance criteria.",
+        "description": "Given a feature brief and acceptance criteria, generate a well-formed user story in the format: As a [role], I want [goal] so that [benefit]. Include clear acceptance criteria and definition of done.",
+        "certified": true,
+        "upvotes": 18,
+        "author": "Sarah Chen [PROD]"
+      },
+      {
+        "id": 2,
+        "title": "Refine Backlog and Prioritize by Value",
+        "prompt": "Review this backlog and propose a prioritized list of items based on business value, dependencies, and risk, with a brief rationale for each.",
+        "description": "Review the current backlog items and suggest a priority order based on business value, dependencies, and risk. Output a ranked list with short justification for each.",
+        "certified": false,
+        "upvotes": 9,
+        "author": "David Park [PROD]"
+      },
+      {
+        "id": 3,
+        "title": "Sprint Planning Checklist",
+        "prompt": "Generate a sprint planning checklist that covers capacity, sprint goal, story selection, task breakdown, and commitment items.",
+        "description": "Generate a sprint planning checklist: capacity check, goal setting, story selection, task breakdown, and commitment. Include prompts for team discussion.",
+        "certified": true,
+        "upvotes": 14,
+        "author": "Sarah Chen [PROD]"
+      }
+    ]
+  },
+  {
+    "agentId": 3,
+    "title": "Production Agent Prompt Catalog",
+    "subtitle": "Deployments, rollbacks, and incident response",
+    "totalPrompts": 31,
+    "prompts": [
+      {
+        "id": 1,
+        "title": "Rollback Runbook from Release Notes",
+        "prompt": "From these release notes and deployment steps, create a rollback runbook with pre-conditions, rollback steps, verification, and escalation contacts.",
+        "description": "From the provided release notes and deployment steps, generate a concise rollback runbook: pre-conditions, rollback steps, verification, and contact escalation.",
+        "certified": true,
+        "upvotes": 22,
+        "author": "Ops Team [INFRA]"
+      },
+      {
+        "id": 2,
+        "title": "Incident Summary for Post-Mortem",
+        "prompt": "Using this incident information, draft a post-mortem summary with timeline, impact, suspected root cause, and follow-up actions.",
+        "description": "Draft an incident summary suitable for a blameless post-mortem: timeline, impact, root cause, and suggested follow-up actions.",
+        "certified": false,
+        "upvotes": 7,
+        "author": "Ops Team [INFRA]"
+      },
+      {
+        "id": 3,
+        "title": "Deployment Checklist",
+        "prompt": "Create a deployment checklist for this release that covers pre-deploy checks, deployment steps, smoke tests, and sign-off.",
+        "description": "Generate a deployment checklist for a production release: pre-deploy checks, deployment steps, smoke tests, and sign-off criteria.",
+        "certified": true,
+        "upvotes": 15,
+        "author": "Release Eng [INFRA]"
+      }
+    ]
+  },
+  {
+    "agentId": 11,
+    "title": "Devin AI Prompt Catalog",
+    "subtitle": "End-to-end software engineering assistance",
+    "totalPrompts": 24,
+    "prompts": [
+      {
+        "id": 1,
+        "title": "Generate Implementation Plan from Ticket",
+        "prompt": "From this Jira ticket or feature request, propose an implementation plan: impacted services, code changes, tests, and rollout steps.",
+        "description": "Given a Jira ticket or feature request, generate an implementation plan: impacted services, code areas to touch, test strategy, and rollout steps.",
+        "certified": true,
+        "upvotes": 16,
+        "author": "Devin AI Team"
+      },
+      {
+        "id": 2,
+        "title": "Refactor Legacy Module Safely",
+        "prompt": "Given this legacy module, recommend a refactoring approach, tests to add, and safety checks before deployment.",
+        "description": "From a legacy code snippet, propose a refactoring plan with clearer structure, tests to add, and specific safety checks to run before deployment.",
+        "certified": false,
+        "upvotes": 8,
+        "author": "Devin AI Team"
+      }
+    ]
+  },
+  {
+    "agentId": 21,
+    "title": "Incident Manager Prompt Catalog",
+    "subtitle": "Triage, communication, and follow-up",
+    "totalPrompts": 22,
+    "prompts": [
+      {
+        "id": 1,
+        "title": "Draft Initial Incident Bridge Announcement",
+        "prompt": "From these incident details, draft a concise bridge announcement: impact, start time, scope, known workarounds, and next update time.",
+        "description": "Using current incident details (impact, symptoms, scope), draft a concise bridge announcement: what is impacted, when it started, known workarounds, and next update time.",
+        "certified": true,
+        "upvotes": 13,
+        "author": "Incident Mgmt [OPS]"
+      },
+      {
+        "id": 2,
+        "title": "Create Incident Timeline for Review",
+        "prompt": "Based on these chat messages and alerts, build an incident timeline with key events, actions, and decisions.",
+        "description": "From a list of chat messages and monitoring alerts, generate a clear incident timeline with key events, owner actions, and decision points.",
+        "certified": false,
+        "upvotes": 9,
+        "author": "Incident Mgmt [OPS]"
+      }
+    ]
   }
 ]
-
