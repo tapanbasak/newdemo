@@ -2,6 +2,33 @@
   padding: 0 1.5rem 2rem;
 }
 
+.copy-toast {
+  position: fixed;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background-color: #0f172a;
+  color: #f9fafb;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  animation: copyToastFade 0.2s ease-out;
+}
+
+@keyframes copyToastFade {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 /* My Upvotes – prompt list (catalog-style) */
 .my-upvotes-view {
   background: #fff;
@@ -65,7 +92,7 @@
 
 .prompts-table .row {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 140px 180px;
+  grid-template-columns: 220px 110px minmax(0, 1fr) 140px 180px;
   align-items: flex-start;
   gap: 1rem;
   padding: 0.75rem 0;
@@ -78,6 +105,12 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
+.prompts-table .col-run-header {
+  visibility: hidden;
+  font-size: 0;
+  user-select: none;
+}
+
 .prompts-table-row {
   border-bottom: 1px solid #e5e7eb;
 }
@@ -88,21 +121,41 @@
   margin-bottom: 0.25rem;
 }
 
+.prompts-table .col-run {
+  display: flex;
+  align-items: flex-start;
+}
+
+.prompts-table .col-run .run-prompt-btn {
+  white-space: nowrap;
+}
+
 .prompts-table .prompt-certified {
   font-size: 0.75rem;
   color: #15803d;
 }
 
 .prompts-table .run-prompt-btn {
-  display: inline-block;
-  margin-bottom: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   padding: 0.35rem 0.75rem;
+  flex-shrink: 0;
   border-radius: 999px;
   border: none;
   background-color: #111827;
   color: #f9fafb;
   font-size: 0.8rem;
   cursor: pointer;
+}
+
+.prompts-table .run-prompt-btn .run-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.prompts-table .run-prompt-btn .run-icon svg {
+  display: block;
 }
 
 .prompts-table .prompt-text {
@@ -113,12 +166,23 @@
 }
 
 .prompts-table .upvote-pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
   background-color: #0f172a;
   color: #e5e7eb;
   font-size: 0.8rem;
+}
+
+.prompts-table .upvote-pill .upvote-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.prompts-table .upvote-pill .upvote-icon svg {
+  display: block;
 }
 
 .prompts-table .col-author {

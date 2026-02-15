@@ -23,6 +23,11 @@
     </aside>
 
     <main class="share-main">
+      @if (showSuccessMessage()) {
+        <div class="success-banner" role="alert">
+          Your prompt has been shared successfully.
+        </div>
+      }
       <h1 class="page-title">Share Your Prompt</h1>
 
       <section class="section">

@@ -32,6 +32,16 @@ export class PromptCatalogPageComponent implements OnInit {
     return current.prompts.filter((p) => p.certified);
   });
 
+  /** Count to show: when filtering by certified, show filtered count; otherwise total in catalog. */
+  displayPromptCount = computed(() => {
+    const current = this.catalog();
+    if (!current) return 0;
+    if (this.showCertifiedOnly()) {
+      return current.prompts.filter((p) => p.certified).length;
+    }
+    return current.prompts.length;
+  });
+
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('agentId'));
     this.agentId.set(id);
@@ -91,6 +101,23 @@ export class PromptCatalogPageComponent implements OnInit {
 
   hasUpvoted(prompt: PromptCatalogItem): boolean {
     return this.service.hasUpvoted(this.agentId(), prompt.id);
+  }
+
+  showCopiedMessage = signal(false);
+
+  /** Copy prompt text to clipboard, then open contact page in new tab. */
+  onRunPrompt(prompt: PromptCatalogItem): void {
+    const text = prompt.prompt ?? prompt.description ?? '';
+    if (!text) return;
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        this.showCopiedMessage.set(true);
+        setTimeout(() => this.showCopiedMessage.set(false), 2500);
+        window.open('https://www.vortexiq.ai/contact-us', '_blank', 'noopener,noreferrer');
+      }).catch(() => {});
+    } else {
+      window.open('https://www.vortexiq.ai/contact-us', '_blank', 'noopener,noreferrer');
+    }
   }
 }
 

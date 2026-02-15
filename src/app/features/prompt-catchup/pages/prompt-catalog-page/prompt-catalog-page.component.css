@@ -1,3 +1,34 @@
+.catalog-page-wrapper {
+  position: relative;
+}
+
+.copy-toast {
+  position: fixed;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background-color: #0f172a;
+  color: #f9fafb;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  animation: copyToastFade 0.2s ease-out;
+}
+
+@keyframes copyToastFade {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 .catalog-page {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
@@ -65,9 +96,13 @@
 }
 
 .breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   font-size: 0.8125rem;
   color: #64748b;
   margin: 0.75rem 1.5rem 0.5rem;
+  margin-left: 1rem;
 }
 
 .breadcrumb a {
@@ -125,9 +160,25 @@
   margin-top: 0.75rem;
 }
 
+.catalog-empty {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 1rem;
+}
+
+.catalog-empty a {
+  color: #1e40af;
+  text-decoration: none;
+}
+
+.catalog-empty a:hover {
+  text-decoration: underline;
+}
+
 .row {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 140px 180px;
+  grid-template-columns: 220px 110px minmax(0, 1fr) 140px 180px;
   align-items: flex-start;
   gap: 1rem;
   padding: 0.75rem 0;
@@ -140,6 +191,12 @@
   border-bottom: 1px solid #e2e8f0;
 }
 
+.col-run-header {
+  visibility: hidden;
+  font-size: 0;
+  user-select: none;
+}
+
 .table-row {
   border-bottom: 1px solid #e5e7eb;
 }
@@ -150,20 +207,41 @@
   margin-bottom: 0.35rem;
 }
 
+.col-run {
+  display: flex;
+  align-items: flex-start;
+}
+
+.col-run .run-prompt-btn {
+  white-space: nowrap;
+}
+
 .prompt-certified {
   font-size: 0.75rem;
   color: #15803d;
 }
 
 .run-prompt-btn {
-  display: inline-block;
-  margin-bottom: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
   border: none;
   background-color: #111827;
   color: #f9fafb;
   font-size: 0.8rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.run-prompt-btn .run-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.run-prompt-btn .run-icon svg {
+  display: block;
 }
 
 .prompt-text {
@@ -172,7 +250,9 @@
 }
 
 .upvote-pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
   border: none;
@@ -180,6 +260,15 @@
   color: #e5e7eb;
   font-size: 0.8rem;
   cursor: pointer;
+}
+
+.upvote-pill .upvote-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.upvote-pill .upvote-icon svg {
+  display: block;
 }
 
 .upvote-pill:hover {

@@ -51,12 +51,62 @@ export class PromptCatchupService {
     return of(AGENTS);
   }
 
+  /** Returns prompt counts and prompt texts per agent from catalog + shared prompts (single HTTP call). */
+  getPromptData(): Observable<{
+    counts: Record<number, number>;
+    textsByAgent: Record<number, string[]>;
+  }> {
+    return this.http
+      .get<PromptCatalog[]>('/assets/prompt-catalog-sample.json')
+      .pipe(
+        map((list) => {
+          const counts: Record<number, number> = {};
+          const textsByAgent: Record<number, string[]> = {};
+          for (const cat of list) {
+            counts[cat.agentId] = cat.prompts?.length ?? 0;
+            const texts: string[] = [];
+            for (const p of cat.prompts ?? []) {
+              if (p.prompt) texts.push(p.prompt);
+              if (p.description) texts.push(p.description);
+            }
+            textsByAgent[cat.agentId] = texts;
+          }
+          const shared = this.getSharedPrompts();
+          for (const p of shared) {
+            const audience = (p.audience ?? '')
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean);
+            for (const a of audience) {
+              const m = /^agent:(\d+)$/.exec(a);
+              if (m) {
+                const id = Number(m[1]);
+                counts[id] = (counts[id] ?? 0) + 1;
+                if (!textsByAgent[id]) textsByAgent[id] = [];
+                if (p.prompt) textsByAgent[id].push(p.prompt);
+                if (p.description) textsByAgent[id].push(p.description);
+              }
+            }
+          }
+          return { counts, textsByAgent };
+        })
+      );
+  }
+
   getPromptCatalog(agentId: number): Observable<PromptCatalog> {
     return this.http
       .get<PromptCatalog[]>('/assets/prompt-catalog-sample.json')
       .pipe(
         map((list) => {
-          const base = list.find((c) => c.agentId === agentId) ?? list[0];
+          const found = list.find((c) => c.agentId === agentId);
+          const agent = AGENTS.find((a) => a.id === agentId);
+          const base = found ?? {
+            agentId,
+            title: (agent?.name ?? 'Agent') + ' Prompt Catalog',
+            subtitle: '',
+            totalPrompts: 0,
+            prompts: [] as PromptCatalog['prompts'],
+          };
           const shared = this.getSharedPrompts();
 
           // Only include shared prompts that are tagged for this agent
@@ -80,14 +130,15 @@ export class PromptCatchupService {
             })
           );
 
-          const prompts = [...base.prompts, ...sharedItems].map((p) => ({
+          const basePrompts = base.prompts ?? [];
+          const prompts = [...basePrompts, ...sharedItems].map((p) => ({
             ...p,
             upvotes:
               this.getStoredUpvoteCount(base.agentId, p.id) ?? p.upvotes,
           }));
           return {
             ...base,
-            totalPrompts: base.totalPrompts + sharedItems.length,
+            totalPrompts: prompts.length,
             prompts,
           };
         })

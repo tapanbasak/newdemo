@@ -1,6 +1,6 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { PromptCatchupService } from '../../services/prompt-catchup.service';
 import { Agent, Group, SharedPrompt } from '../../models/prompt-catchup.models';
@@ -15,7 +15,6 @@ import { Agent, Group, SharedPrompt } from '../../models/prompt-catchup.models';
 export class SharePromptPageComponent implements OnInit {
   private fb = inject(FormBuilder);
   private service = inject(PromptCatchupService);
-  private router = inject(Router);
 
   groups: Group[] = [];
   // Groups that can be selected in the audience control (exclude My Upvotes)
@@ -88,6 +87,8 @@ export class SharePromptPageComponent implements OnInit {
     this.form.patchValue({ audience: next.join(', ') });
   }
 
+  showSuccessMessage = signal(false);
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -95,7 +96,16 @@ export class SharePromptPageComponent implements OnInit {
     }
 
     this.service.addSharedPrompt(this.form.getRawValue() as SharedPrompt);
-    this.router.navigate(['/prompt-catchup']);
+    this.form.reset({
+      title: '',
+      createdBy: '',
+      createdBySoeid: '',
+      audience: '',
+      prompt: '',
+      description: '',
+      attachments: '',
+    });
+    this.showSuccessMessage.set(true);
   }
 }
 

@@ -45,10 +45,25 @@
   padding: 1.25rem 1.5rem;
 }
 
+.success-banner {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  color: #065f46;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
 .breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   font-size: 0.8125rem;
   color: #64748b;
   margin: 0.75rem 1.5rem 0.5rem;
+  margin-left: 1rem;
 }
 
 .breadcrumb a {

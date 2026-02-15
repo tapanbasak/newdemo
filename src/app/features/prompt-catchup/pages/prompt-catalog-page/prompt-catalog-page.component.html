@@ -1,4 +1,7 @@
-<div *ngIf="catalog() as data">
+<div *ngIf="catalog() as data" class="catalog-page-wrapper">
+  @if (showCopiedMessage()) {
+    <div class="copy-toast" role="status">Prompt copied</div>
+  }
   <nav class="breadcrumb">
     <a [routerLink]="['/prompt-catchup']">Prompt Catch Up</a>
     <span class="breadcrumb-separator">/</span>
@@ -17,7 +20,7 @@
 
     <nav class="sidebar-nav">
       <a [routerLink]="['/prompt-catchup']" class="sidebar-link">Home</a>
-      <a href="javascript:void(0)" class="sidebar-link">Share your Prompt</a>
+      <a [routerLink]="['/prompt-catchup/share']" class="sidebar-link">Share your Prompt</a>
     </nav>
 
     <div class="prompt-list">
@@ -38,7 +41,7 @@
       <h1 class="catalog-title">{{ data.title }}</h1>
       <p class="catalog-subtitle">{{ data.subtitle }}</p>
       <div class="catalog-meta">
-        <span>{{ data.totalPrompts }} Prompts Found</span>
+        <span>{{ displayPromptCount() }} Prompts Found</span>
       </div>
     </header>
 
@@ -54,8 +57,14 @@
     </section>
 
     <section class="catalog-table">
+      @if (filteredPrompts().length === 0) {
+        <div class="catalog-empty">
+          No prompts yet. <a [routerLink]="['/prompt-catchup/share']">Be the first to share one.</a>
+        </div>
+      } @else {
       <div class="table-header row">
         <div class="col col-title">Prompt Title</div>
+        <div class="col col-run col-run-header"></div>
         <div class="col col-prompt">Prompt</div>
         <div class="col col-upvotes">Upvotes</div>
         <div class="col col-author">Author</div>
@@ -71,8 +80,17 @@
             Certified
           </div>
         </div>
+        <div class="col col-run">
+          <button type="button" class="run-prompt-btn" (click)="onRunPrompt(prompt)">
+            Run Prompt
+            <span class="btn-icon run-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7L8 5z"/>
+              </svg>
+            </span>
+          </button>
+        </div>
         <div class="col col-prompt">
-          <button class="run-prompt-btn">Run Prompt</button>
           <p class="prompt-text">
             {{ prompt.prompt || prompt.description }}
           </p>
@@ -84,6 +102,11 @@
             [class.upvoted]="hasUpvoted(prompt)"
             (click)="onUpvote(prompt)"
           >
+            <span class="btn-icon upvote-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2c0-1.1-.9-2-2-2zm0 4l-3 7H9V9l4.34-4.34L12.23 10H20v2z"/>
+              </svg>
+            </span>
             {{ prompt.upvotes }} Upvotes
           </button>
         </div>
@@ -91,6 +114,7 @@
           {{ prompt.author }}
         </div>
       </div>
+      }
     </section>
     </div>
   </div>

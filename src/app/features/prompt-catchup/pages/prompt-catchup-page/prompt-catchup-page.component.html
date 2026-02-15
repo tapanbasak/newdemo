@@ -7,7 +7,7 @@
     <!-- Sidebar -->
     <div class="col-12 col-md-3 col-lg-2">
       <app-groups-sidebar
-        [groups]="groups()"
+        [groups]="groupsWithCounts()"
         [selectedGroup]="selectedGroup()"
         [links]="sidebarLinks()"
         (groupSelected)="onGroupSelected($event)"
@@ -17,6 +17,9 @@
     <!-- Main Content -->
     <div class="col-12 col-md-9 col-lg-10">
       @if (selectedGroup() === 'my-upvotes') {
+        @if (showCopiedMessage()) {
+          <div class="copy-toast" role="status">Prompt copied</div>
+        }
         <div class="my-upvotes-view">
           <div class="prompts-filter-bar">
             <div class="prompts-search-field">
@@ -52,6 +55,7 @@
           <section class="prompts-table">
             <div class="prompts-table-header row">
               <div class="col col-title">Prompt Title</div>
+              <div class="col col-run col-run-header"></div>
               <div class="col col-prompt">Prompt</div>
               <div class="col col-upvotes">Upvotes</div>
               <div class="col col-author">Author</div>
@@ -65,12 +69,28 @@
                       <div class="prompt-certified">Certified</div>
                     }
                   </div>
+                  <div class="col col-run">
+                    <button type="button" class="run-prompt-btn" (click)="onRunPrompt(row)">
+                      Run Prompt
+                      <span class="btn-icon run-icon" aria-hidden="true">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M8 5v14l11-7L8 5z"/>
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
                   <div class="col col-prompt">
-                    <button type="button" class="run-prompt-btn">Run Prompt</button>
                     <p class="prompt-text">{{ row.description }}</p>
                   </div>
                   <div class="col col-upvotes">
-                    <span class="upvote-pill">{{ row.upvotes }} Upvotes</span>
+                    <span class="upvote-pill">
+                      <span class="btn-icon upvote-icon" aria-hidden="true">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2c0-1.1-.9-2-2-2zm0 4l-3 7H9V9l4.34-4.34L12.23 10H20v2z"/>
+                        </svg>
+                      </span>
+                      {{ row.upvotes }} Upvotes
+                    </span>
                   </div>
                   <div class="col col-author">{{ row.author }}</div>
                 </div>

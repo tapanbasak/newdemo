@@ -41,6 +41,7 @@ export class PromptCatchupPageComponent implements OnInit {
   private router = inject(Router);
 
   allAgents = signal<Agent[]>([]);
+  promptTextsByAgent = signal<Record<number, string[]>>({});
   groups = signal<Group[]>([]);
   sidebarLinks = signal<SidebarLink[]>([]);
 
@@ -52,15 +53,56 @@ export class PromptCatchupPageComponent implements OnInit {
   showCertifiedOnly = signal(false);
   promptSearch = signal('');
 
-  filteredAgents = computed(() =>
-    this.service.filterAgents(
-      this.allAgents(),
-      this.search(),
+  filteredAgents = computed(() => {
+    const agents = this.allAgents();
+    const q = this.search().toLowerCase().trim();
+    const textsByAgent = this.promptTextsByAgent();
+    // Filter by group, status (no name/description search - we use prompt text)
+    let result = this.service.filterAgents(
+      agents,
+      '',
       this.status(),
       this.sort(),
       this.selectedGroup()
-    )
-  );
+    );
+    if (q) {
+      result = result.filter((a) => {
+        const texts = textsByAgent[a.id];
+        if (!texts?.length) return false;
+        return texts.some((t) => t.toLowerCase().includes(q));
+      });
+    }
+    return result;
+  });
+
+  /** Groups with counts updated to reflect current search (prompt text) and status filters. */
+  groupsWithCounts = computed(() => {
+    const base = this.groups();
+    const agents = this.allAgents();
+    const q = this.search().toLowerCase().trim();
+    const status = this.status();
+    const textsByAgent = this.promptTextsByAgent();
+    return base.map((g) => {
+      if (g.slug === 'my-upvotes') {
+        return { ...g, count: this.service.getMyUpvotes().length };
+      }
+      let filtered = this.service.filterAgents(
+        agents,
+        '',
+        status,
+        'most_prompts',
+        g.slug
+      );
+      if (q) {
+        filtered = filtered.filter((a) => {
+          const texts = textsByAgent[a.id];
+          if (!texts?.length) return false;
+          return texts.some((t) => t.toLowerCase().includes(q));
+        });
+      }
+      return { ...g, count: filtered.length };
+    });
+  });
 
   filteredMyUpvotesPrompts = computed((): MyUpvotesPromptRow[] => {
     if (this.selectedGroup() !== 'my-upvotes') {
@@ -90,7 +132,17 @@ export class PromptCatchupPageComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.service.getAgents().subscribe((a) => this.allAgents.set(a));
+    // Load agents immediately so group counts are correct from first render
+    this.service.getAgents().subscribe((agents) => this.allAgents.set(agents));
+    this.service.getPromptData().subscribe((promptData) => {
+      const current = this.allAgents();
+      const merged = current.map((a) => ({
+        ...a,
+        promptCount: promptData.counts[a.id] ?? 0,
+      }));
+      this.allAgents.set(merged);
+      this.promptTextsByAgent.set(promptData.textsByAgent);
+    });
     this.refreshGroups();
     this.service.getSidebarLinks().subscribe((l) => this.sidebarLinks.set(l));
     this.router.events
@@ -142,5 +194,22 @@ export class PromptCatchupPageComponent implements OnInit {
 
   toggleCertified(checked: boolean): void {
     this.showCertifiedOnly.set(checked);
+  }
+
+  showCopiedMessage = signal(false);
+
+  /** Copy prompt text to clipboard, then open contact page in new tab. */
+  onRunPrompt(row: MyUpvotesPromptRow): void {
+    const text = row.description ?? '';
+    if (!text) return;
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        this.showCopiedMessage.set(true);
+        setTimeout(() => this.showCopiedMessage.set(false), 2500);
+        window.open('https://www.vortexiq.ai/contact-us', '_blank', 'noopener,noreferrer');
+      }).catch(() => {});
+    } else {
+      window.open('https://www.vortexiq.ai/contact-us', '_blank', 'noopener,noreferrer');
+    }
   }
 }
