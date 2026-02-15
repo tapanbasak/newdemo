@@ -75,7 +75,10 @@
         *ngFor="let prompt of filteredPrompts()"
       >
         <div class="col col-title">
-          <div class="prompt-title">{{ prompt.title }}</div>
+          <a
+            [routerLink]="['/prompt-catchup/catalog', agentId(), 'prompt', prompt.id]"
+            class="prompt-title-link"
+          >{{ prompt.title }}</a>
           <div class="prompt-certified" *ngIf="prompt.certified">
             Certified
           </div>

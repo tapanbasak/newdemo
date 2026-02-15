@@ -48,6 +48,12 @@ export interface PromptCatalogItem {
   certified: boolean;
   upvotes: number;
   author: string;
+  /** Time saved when using this prompt, e.g. "30 Minutes" */
+  timesSaved?: string;
+  /** Tip when using the prompt */
+  tip?: string;
+  /** Last updated date, e.g. "07/04" */
+  lastUpdated?: string;
 }
 
 export interface PromptCatalog {

@@ -12,7 +12,10 @@
         "description": "As a Project Manager, review the Desired Outcome(s) and Project Objective(s) to generate CSC, KPI, KPI Value Type, and KPI Target Date for the work effort. Use this prompt to structure measurable items that can be tracked throughout the project lifecycle.",
         "certified": true,
         "upvotes": 26,
-        "author": "Rathinam, Archana [TECH]"
+        "author": "Rathinam, Archana [TECH]",
+        "timesSaved": "30 Minutes",
+        "tip": "Ensure the Project Description and Project Objective are clear, concise and explained in laymen terms for an effective output. Review the outcome with the Product owner or sponsor before entering it in PTS.",
+        "lastUpdated": "07/04"
       },
       {
         "id": 2,
@@ -21,7 +24,9 @@
         "description": "CSC is Critical Success Criteria; this prompt helps validate that measurable terms of what must be done for the work effort to be considered successful are clearly defined and aligned with project objectives.",
         "certified": true,
         "upvotes": 13,
-        "author": "Rathinam, Archana [TECH]"
+        "author": "Rathinam, Archana [TECH]",
+        "timesSaved": "15 Minutes",
+        "lastUpdated": "07/03"
       }
     ]
   },

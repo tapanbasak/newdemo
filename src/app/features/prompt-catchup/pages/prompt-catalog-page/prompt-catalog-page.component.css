@@ -201,10 +201,16 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-.col-title .prompt-title {
+.col-title .prompt-title-link {
   font-weight: 600;
   font-size: 0.9rem;
   margin-bottom: 0.35rem;
+  color: #1e40af;
+  text-decoration: none;
+}
+
+.col-title .prompt-title-link:hover {
+  text-decoration: underline;
 }
 
 .col-run {

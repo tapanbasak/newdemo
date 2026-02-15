@@ -15,6 +15,15 @@ import { AGENTS, GROUPS, SCOREBOARD_DATA, SIDEBAR_LINKS } from '../data/prompt-c
 
 const MY_UPVOTES_KEY = 'pcu_my_upvotes';
 const PROMPT_UPVOTES_KEY = 'pcu_prompt_upvotes';
+const PROMPT_COMMENTS_KEY = 'pcu_prompt_comments';
+
+export interface StoredComment {
+  id: string;
+  author: string;
+  role: string;
+  text: string;
+  timeAgo: string;
+}
 
 export interface MyUpvoteEntry {
   agentId: number;
@@ -218,6 +227,38 @@ export class PromptCatchupService {
       localStorage.setItem(this.SHARED_PROMPTS_KEY, JSON.stringify(current));
     } catch {
       // ignore storage errors
+    }
+  }
+
+  getComments(agentId: number, promptId: number): StoredComment[] {
+    if (typeof localStorage === 'undefined') return [];
+    try {
+      const raw = localStorage.getItem(PROMPT_COMMENTS_KEY);
+      if (!raw) return [];
+      const obj = JSON.parse(raw) as Record<string, StoredComment[]>;
+      const key = `${agentId}_${promptId}`;
+      return obj[key] ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  addComment(
+    agentId: number,
+    promptId: number,
+    comment: StoredComment
+  ): void {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(PROMPT_COMMENTS_KEY);
+      const obj = raw ? (JSON.parse(raw) as Record<string, StoredComment[]>) : {};
+      const key = `${agentId}_${promptId}`;
+      const list = obj[key] ?? [];
+      list.push(comment);
+      obj[key] = list;
+      localStorage.setItem(PROMPT_COMMENTS_KEY, JSON.stringify(obj));
+    } catch {
+      // ignore
     }
   }
 
