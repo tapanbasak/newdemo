@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Service Config Console</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-logo brand-logo-hidden">SC</span>
+        <div class="brand-text">
+          <h1>Service Config Console</h1>
+          <p>Submit and manage your application configuration</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- LEFT: Landing / microservice selection -->
+      <section class="panel panel-left">
+        <div class="panel-header">
+          <h2>Select configuration</h2>
+          <p class="panel-subtitle">
+            Choose which configuration type to submit for your application.
+          </p>
+        </div>
+
+        <div class="service-grid" id="service-grid">
+          <article class="service-card service-selected" data-service="apprule">
+            <div class="service-card-header">
+              <h3>App Rule Service</h3>
+              <span class="chip chip-green">Active</span>
+            </div>
+            <p class="service-card-body">
+              Manage channel and application level rules for country / business combinations.
+            </p>
+            <ul class="service-meta">
+              <li><span>Supports:</span> DEV, UAT, PERF, PROD</li>
+              <li><span>Keys:</span> Country, Business, Channel, App (optional)</li>
+            </ul>
+          </article>
+
+          <article class="service-card" data-service="mfa">
+            <div class="service-card-header">
+              <h3>MFA Service</h3>
+              <span class="chip">Coming next</span>
+            </div>
+            <p class="service-card-body">
+              Centralise MFA policies.
+            </p>
+            <ul class="service-meta">
+              <li><span>Typical keys:</span> Country, Journey, Channel</li>
+              <li><span>Status:</span> Placeholder for future form</li>
+            </ul>
+          </article>
+
+          <article class="service-card service-card-hidden" data-service="others">
+            <div class="service-card-header">
+              <h3>Other Services</h3>
+              <span class="chip">Extensible</span>
+            </div>
+            <p class="service-card-body">
+              This console can be extended to other configuration domains over time.
+            </p>
+            <ul class="service-meta">
+              <li><span>Idea:</span> Treat each config as a namespaced JSON document</li>
+              <li><span>Storage:</span> Shared MongoDB configuration collection</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <!-- RIGHT: Contextual configuration form -->
+      <section class="panel panel-right">
+        <div class="panel-header">
+          <h2 id="form-title">App Rule configuration</h2>
+          <p class="panel-subtitle" id="form-subtitle">
+            Define JSON configuration scoped by environment, country, business, channel, and optional application id.
+          </p>
+        </div>
+
+        <form id="config-form" class="config-form" novalidate>
+          <div class="field-row">
+            <div class="field">
+              <label for="environment">Environment<span class="required">*</span></label>
+              <select id="environment" name="environment" required>
+                <option value="">Select environment</option>
+                <option value="DEV">DEV</option>
+                <option value="UAT">UAT</option>
+                <option value="PERF">PERF</option>
+                <option value="PROD">PROD</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="country">Country code<span class="required">*</span></label>
+              <select id="country" name="country" required>
+                <option value="">Select country</option>
+                <option value="US">US</option>
+                <option value="CA">CA</option>
+                <option value="UK">UK</option>
+                <option value="SG">SG</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="business">Business code<span class="required">*</span></label>
+              <select id="business" name="business" required>
+                <option value="">Select business</option>
+                <option value="GCB">GCB</option>
+                <option value="CRS">CRS</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="channel">Channel ID<span class="required">*</span></label>
+              <select id="channel" name="channel" required>
+                <option value="">Select channel</option>
+                <option value="CBOL">CBOL (Online)</option>
+                <option value="MOB">MOB (Mobile)</option>
+                <option value="IVR">IVR</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="applicationId">Application ID <span class="optional">(optional)</span></label>
+              <input
+                id="applicationId"
+                name="applicationId"
+                type="text"
+                placeholder="e.g. ANDROID, IOS, WEB"
+              />
+              <p class="field-hint">
+                If left blank, config is keyed only by country, business and channel.
+              </p>
+            </div>
+
+            <div class="field">
+              <label for="key-preview">Computed key</label>
+              <input
+                id="key-preview"
+                name="key-preview"
+                type="text"
+                readonly
+                class="readonly-input"
+                value="US_GCB_MOB_ANDROID"
+              />
+              <p class="field-hint">
+                This is how the config key will be stored.
+              </p>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <label for="configJson">Configuration JSON<span class="required">*</span></label>
+              <span class="label-badge">Basic validation only</span>
+            </div>
+            <textarea
+              id="configJson"
+              name="configJson"
+              rows="10"
+              spellcheck="false"
+              placeholder='{
+  "mob_ac": {
+    "useBAUEndpoint": false,
+    "urlText": "test.com"
+  },
+  "mob_invest": {
+    "investFlag": true
+  }
+}'
+              required
+            ></textarea>
+            <p id="json-error" class="json-error" aria-live="polite"></p>
+          </div>
+
+          <div class="form-footer">
+            <div class="form-footer-right">
+              <button type="button" id="btn-reset" class="btn btn-ghost">Reset</button>
+              <button type="submit" class="btn btn-primary">Preview config</button>
+              <button type="button" id="btn-submit" class="btn btn-primary">Submit</button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Live config preview -->
+        <section class="preview-panel" aria-label="Config preview">
+          <div class="preview-header">
+            <h3>Config preview</h3>
+            <span id="preview-badge" class="chip chip-muted">Waiting for input</span>
+          </div>
+          <pre id="preview-output" class="preview-output"></pre>
+        </section>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+    </footer>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
+
