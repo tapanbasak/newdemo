@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ingress Origin Whitelisting - PSG</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-logo brand-logo-hidden">SC</span>
+        <div class="brand-text">
+          <h1>Ingress Origin Whitelisting – PSG</h1>
+          <p>Self-service portal to whitelist application domains for the Platform Security Gateway (PSG)</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <section class="panel panel-right">
+        <div class="panel-header">
+          <h2>PSG Origin Whitelisting</h2>
+          <p class="panel-subtitle">
+            Whitelist application domains for secure communication with the Platform Security Gateway (PSG). All changes are applied dynamically at runtime.
+          </p>
+        </div>
+
+        <div class="form-section">
+          <h3>Step 1: Application Identification</h3>
+          <div class="field">
+            <div class="csi-row">
+              <label class="csi-label">CSI <span class="required">*</span></label>
+              <div class="dropdown-psg csi-input-wrap">
+                <input type="text" id="csiInput"
+                       placeholder="Search or select CSI"
+                       onkeyup="filterCSI()" onclick="showCSIList()">
+                <div id="csiList" class="dropdown-list"></div>
+              </div>
+            </div>
+            <input type="text" id="newCSI"
+                   placeholder="Enter new CSI"
+                   style="display:none; margin-top:8px;">
+            <p class="field-hint">
+              CSI uniquely identifies your application in PSG. If your CSI is not listed, select <b>Enter CSI</b> and enter a new one.
+            </p>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Step 2: PSG Instance Selection</h3>
+          <div class="field">
+            <label>Select PSG Instance(s) <span class="required">*</span></label>
+            <select multiple id="psgInstance">
+              <option>psg-nonprod-ap-south</option>
+              <option>psg-nonprod-us-east</option>
+              <option>psg-prod-ap-south</option>
+            </select>
+            <p class="field-hint">
+              Select the PSG instance(s) where your application is onboarded. (Multiple selection allowed)
+            </p>
+          </div>
+        </div>
+
+        <div class="collapsible-box">
+          <button type="button" class="collapsible-trigger" onclick="toggleOriginHelp()" aria-expanded="false" id="originHelpTrigger">
+            What is an Application Origin?
+          </button>
+          <div class="collapsible-content" id="originHelpContent" aria-hidden="true">
+            An origin is the <b>application domain or hostname</b> from which API requests are sent <b>to PSG</b>.
+            PSG will allow requests <b>only from the domains listed below</b>.
+            <br><br>
+            <b>Examples:</b> https://dev.myapp.company.com, https://uat.myapp.company.com, https://www.myapp.com
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Configure domain type</h3>
+          <p class="field-hint" style="margin-bottom:0;">Choose whether you are adding non-production domains, production domains, or both.</p>
+          <div class="radio-group">
+            <label>
+              <input type="radio" name="domainType" value="nonprod" onchange="toggleDomainSteps()">
+              Non-production only (DEV / UAT / PERF)
+            </label>
+            <label>
+              <input type="radio" name="domainType" value="prod" onchange="toggleDomainSteps()">
+              Production only
+            </label>
+            <label>
+              <input type="radio" name="domainType" value="both" checked onchange="toggleDomainSteps()">
+              Both non-production and production
+            </label>
+          </div>
+        </div>
+
+        <div id="step3Section" class="form-section">
+          <h3>Step 3: Non-Production Application Domains (Calling PSG)</h3>
+          <div class="info-box">
+            Applies to <span class="env-badge">DEV</span> <span class="env-badge">UAT</span> <span class="env-badge">PERF</span> environments.<br>
+            Each non-production domain requires <b>one-time approval by the CSI Manager</b> before PSG access is enabled.
+          </div>
+          <div id="nonProdContainer"></div>
+          <button type="button" class="btn btn-primary" style="margin-top:10px;" onclick="addNonProd()">+ Add Another Non-Prod Domain</button>
+        </div>
+
+        <div id="step4Section" class="form-section">
+          <h3>Step 4: Production Application Domains (Calling PSG)</h3>
+          <div class="warning-box">
+            Production access is tightly controlled.<br>
+            Add only <b>live application domains</b> that will call PSG. A valid <b>Change Request (CR)</b> is mandatory and will be validated automatically.
+          </div>
+          <div id="prodContainer"></div>
+          <button type="button" class="btn btn-primary" style="margin-top:10px;" onclick="addProd()">+ Add Another Prod Domain</button>
+
+          <div id="crFieldWrap" class="field cr-field-mandatory" style="margin-top:14px;">
+            <label>Change Request (CR) Number <span class="required">*</span></label>
+            <input type="text" id="crNumberInput" placeholder="e.g. CHG123456">
+            <p class="field-hint">
+              This CR will be validated and applied to <b>all production domains</b>. The CR must be in <b>Active / Implementation</b> stage and linked to the selected CSI.
+            </p>
+          </div>
+
+          <div class="checkbox-row checkbox-row-hidden">
+            <input type="checkbox" id="prodConfirm">
+            <label for="prodConfirm">
+              I confirm this production change is approved, scheduled, and linked to the selected CSI
+            </label>
+          </div>
+        </div>
+
+        <div class="form-footer">
+          <div class="form-footer-right">
+            <button type="button" class="btn btn-ghost" onclick="location.reload()">Reset</button>
+            <button type="button" class="btn btn-primary" onclick="submitForm()">Submit</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer"></footer>
+  </div>
+
+  <script>
+const csiValues = [
+  "169073",
+  "178695",
+  "178634",
+  "167349",
+  "734622",
+  "168723",
+  "➕ Enter CSI"
+];
+
+function showCSIList() {
+  document.getElementById("csiList").style.display = "block";
+  renderCSIList(csiValues);
+}
+
+function filterCSI() {
+  const value = document.getElementById("csiInput").value.toLowerCase();
+  renderCSIList(csiValues.filter(c => c.toLowerCase().includes(value)));
+}
+
+function renderCSIList(items) {
+  const list = document.getElementById("csiList");
+  list.innerHTML = "";
+  items.forEach(item => {
+    const div = document.createElement("div");
+    div.textContent = item;
+    div.onclick = () => selectCSI(item);
+    list.appendChild(div);
+  });
+}
+
+function selectCSI(value) {
+  document.getElementById("csiInput").value = value;
+  document.getElementById("csiList").style.display = "none";
+  document.getElementById("newCSI").style.display =
+    value.includes("Enter CSI") ? "block" : "none";
+}
+
+function toggleOriginHelp() {
+  const content = document.getElementById("originHelpContent");
+  const trigger = document.getElementById("originHelpTrigger");
+  if (!content || !trigger) return;
+  const isOpen = content.getAttribute("aria-hidden") === "false";
+  content.setAttribute("aria-hidden", isOpen ? "true" : "false");
+  trigger.setAttribute("aria-expanded", isOpen ? "false" : "true");
+  content.classList.toggle("collapsible-content-open", !isOpen);
+}
+
+function toggleDomainSteps() {
+  const choice = document.querySelector('input[name="domainType"]:checked');
+  const value = choice ? choice.value : "both";
+  const step3 = document.getElementById("step3Section");
+  const step4 = document.getElementById("step4Section");
+  if (!step3 || !step4) return;
+  step3.style.display = (value === "prod") ? "none" : "block";
+  step4.style.display = (value === "nonprod") ? "none" : "block";
+}
+
+function addNonProd() {
+  const div = document.createElement("div");
+  div.className = "origin-row";
+  div.innerHTML = `
+    <input type="text" placeholder="https://dev.example.com">
+    <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">Remove</button>
+  `;
+  document.getElementById("nonProdContainer").appendChild(div);
+}
+
+function addProd() {
+  const div = document.createElement("div");
+  div.className = "origin-row";
+  div.innerHTML = `
+    <input type="text" placeholder="https://www.example.com">
+    <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">Remove</button>
+  `;
+  document.getElementById("prodContainer").appendChild(div);
+}
+
+function submitForm() {
+  alert(
+    "Request submitted successfully!\n\n" +
+    "• Non-Prod domains sent for CSI Manager approval\n" +
+    "• Production domains validated via Change Request\n" +
+    "• PSG configuration updated dynamically"
+  );
+}
+
+toggleDomainSteps();
+addNonProd();
+addProd();
+  </script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>App Rule Service Config Console</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-logo brand-logo-hidden">SC</span>
+        <div class="brand-text">
+          <h1>App Rule Service Config Console</h1>
+          <p>Submit and manage JSON configuration scoped by environment, country, business, channel, and optional application id.</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- App Rule configuration form -->
+      <section class="panel panel-right">
+        <form id="config-form" class="config-form" novalidate>
+          <div class="field-row field-row-scope">
+            <div class="field">
+              <label for="environment">Environment<span class="required">*</span></label>
+              <select id="environment" name="environment" required>
+                <option value="">Select environment</option>
+                <option value="DEV">DEV</option>
+                <option value="UAT">UAT</option>
+                <option value="PERF">PERF</option>
+                <option value="PROD">PROD</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="country">Country code<span class="required">*</span></label>
+              <select id="country" name="country" required>
+                <option value="">Select country</option>
+                <option value="US">US</option>
+                <option value="CA">CA</option>
+                <option value="UK">UK</option>
+                <option value="SG">SG</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="business">Business code<span class="required">*</span></label>
+              <select id="business" name="business" required>
+                <option value="">Select business</option>
+                <option value="GCB">GCB</option>
+                <option value="CRS">CRS</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="channel">Channel ID<span class="required">*</span></label>
+              <select id="channel" name="channel" required>
+                <option value="">Select channel</option>
+                <option value="CBOL">CBOL (Online)</option>
+                <option value="MOB">MOB (Mobile)</option>
+                <option value="IVR">IVR</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="applicationId">Application ID <span class="optional">(optional)</span></label>
+              <input
+                id="applicationId"
+                name="applicationId"
+                type="text"
+                placeholder="e.g. ANDROID, IOS, WEB"
+              />
+              <p class="field-hint field-hint-compact">If blank, key uses country, business and channel.</p>
+            </div>
+
+            <div class="field">
+              <label for="key-preview">Computed key</label>
+              <input
+                id="key-preview"
+                name="key-preview"
+                type="text"
+                readonly
+                class="readonly-input"
+                value="US_GCB_MOB_ANDROID"
+              />
+              <p class="field-hint field-hint-compact">
+                This is how the config key will be stored.
+              </p>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <label for="configJson">Configuration JSON<span class="required">*</span></label>
+              <span class="label-badge">Basic validation only</span>
+            </div>
+            <textarea
+              id="configJson"
+              name="configJson"
+              rows="10"
+              spellcheck="false"
+              placeholder='{
+  "mob_ac": {
+    "useBAUEndpoint": false,
+    "urlText": "test.com"
+  },
+  "mob_invest": {
+    "investFlag": true
+  }
+}'
+              required
+            ></textarea>
+            <p id="json-error" class="json-error" aria-live="polite"></p>
+          </div>
+
+          <div class="form-footer">
+            <div class="form-footer-right">
+              <button type="button" id="btn-reset" class="btn btn-ghost">Reset</button>
+              <button type="submit" class="btn btn-primary">Preview</button>
+            </div>
+          </div>
+        </form>
+      </section>
+    </main>
+    <!-- Review modal -->
+    <div id="review-modal" class="modal-backdrop" aria-hidden="true">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Review configuration</h3>
+        </div>
+        <div class="modal-body">
+          <div class="review-scope">
+            <div class="scope-pair">
+              <span class="scope-label">Environment</span>
+              <span id="review-env" class="scope-value">-</span>
+            </div>
+            <div class="scope-pair">
+              <span class="scope-label">Country</span>
+              <span id="review-country" class="scope-value">-</span>
+            </div>
+            <div class="scope-pair">
+              <span class="scope-label">Business</span>
+              <span id="review-business" class="scope-value">-</span>
+            </div>
+            <div class="scope-pair">
+              <span class="scope-label">Channel</span>
+              <span id="review-channel" class="scope-value">-</span>
+            </div>
+            <div class="scope-pair">
+              <span class="scope-label">App ID</span>
+              <span id="review-appId" class="scope-value">-</span>
+            </div>
+          </div>
+          <div class="modal-json">
+            <label>Configuration JSON</label>
+            <pre id="review-json" class="modal-json-block"></pre>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="modal-cancel" class="btn btn-ghost">Cancel</button>
+          <button type="button" id="modal-submit" class="btn btn-primary">Submit</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="app-footer"></footer>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
+
