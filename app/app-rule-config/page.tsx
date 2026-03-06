@@ -85,6 +85,17 @@ export default function AppRuleSearchPage() {
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [crNumber, setCrNumber] = useState("");
   const [crError, setCrError] = useState("");
+  const [editFileName, setEditFileName] = useState<string | null>(null);
+  const [editJson, setEditJson] = useState("");
+  const [editError, setEditError] = useState("");
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editSubmitMessage, setEditSubmitMessage] = useState("");
+  const [editSubmitError, setEditSubmitError] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [deleteFileName, setDeleteFileName] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const keyPreview = computeKey({
     env: environment,
@@ -107,6 +118,9 @@ export default function AppRuleSearchPage() {
     setAddError("");
     setCrNumber("");
     setCrError("");
+    setEditFileName(null);
+    setEditJson("");
+    setEditError("");
 
     if (!environment || !country || !business || !channel) {
       setSearchError("Please select environment, country, business and channel before searching.");
@@ -164,6 +178,21 @@ export default function AppRuleSearchPage() {
 
   const toggleFile = (name: string) => {
     setExpanded((prev) => ({ ...prev, [name]: !prev[name] }));
+  };
+
+  const handleEditClick = (name: string, value: unknown) => {
+    setEditFileName(name);
+    setEditJson(JSON.stringify(value, null, 2));
+    setEditError("");
+    setEditSubmitMessage("");
+    setEditSubmitError("");
+    setEditModalOpen(true);
+  };
+
+  const handleDeleteClick = async (name: string) => {
+    setDeleteFileName(name);
+    setDeleteError("");
+    setDeleteModalOpen(true);
   };
 
   const handleAddPreview = (e: React.FormEvent) => {
@@ -418,16 +447,85 @@ export default function AppRuleSearchPage() {
               <div className="file-list">
                 {Object.entries(files).map(([name, value]) => (
                   <div key={name} className="file-item">
-                    <button
-                      type="button"
-                      className="file-toggle"
-                      onClick={() => toggleFile(name)}
-                    >
-                      <span>{name}</span>
-                      <span className="file-toggle-icon">
-                        {expanded[name] ? "▾" : "▸"}
-                      </span>
-                    </button>
+                    <div className="file-row">
+                      <button
+                        type="button"
+                        className="file-toggle"
+                        onClick={() => toggleFile(name)}
+                      >
+                        <span>{name}</span>
+                        <span className="file-toggle-icon">
+                          {expanded[name] ? "▾" : "▸"}
+                        </span>
+                      </button>
+                      <div className="file-actions">
+                        <button
+                          type="button"
+                          className="file-action"
+                          onClick={() => handleEditClick(name, value)}
+                          aria-label={`Edit ${name}`}
+                          title="Edit"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 20 20"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M4 13.5L4.5 10.5L12.5 2.5L15.5 5.5L7.5 13.5L4 13.5Z"
+                              stroke="currentColor"
+                              strokeWidth="1.4"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <path
+                              d="M3 17H17"
+                              stroke="currentColor"
+                              strokeWidth="1.4"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="file-action file-action-danger"
+                          onClick={() => handleDeleteClick(name)}
+                          aria-label={`Delete ${name}`}
+                          title="Delete"
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 20 20"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path
+                              d="M5 6H15"
+                              stroke="currentColor"
+                              strokeWidth="1.4"
+                              strokeLinecap="round"
+                            />
+                            <path
+                              d="M8 6V4H12V6"
+                              stroke="currentColor"
+                              strokeWidth="1.4"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <path
+                              d="M6.5 6H13.5L13 15.5H7L6.5 6Z"
+                              stroke="currentColor"
+                              strokeWidth="1.4"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
                     {expanded[name] && (
                       <pre className="file-json">
                         {JSON.stringify(value, null, 2)}
@@ -619,6 +717,248 @@ export default function AppRuleSearchPage() {
                 disabled={addSubmitting}
               >
                 {addSubmitting ? "Adding..." : "Add"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {editFileName && (
+        <div
+          id="edit-modal-search"
+          className={"modal-backdrop" + (editModalOpen ? " open" : "")}
+          aria-hidden={!editModalOpen}
+        >
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Edit file configuration</h3>
+            </div>
+            <div className="modal-body">
+              {editSubmitMessage && (
+                <div className="status-banner status-banner-success">
+                  {editSubmitMessage}
+                </div>
+              )}
+              {editSubmitError && (
+                <div className="status-banner status-banner-error">
+                  {editSubmitError}
+                </div>
+              )}
+              <div className="review-scope">
+                <div className="scope-pair">
+                  <span className="scope-label">Environment</span>
+                  <span className="scope-value">{environment || "-"}</span>
+                </div>
+                <div className="scope-pair">
+                  <span className="scope-label">Country</span>
+                  <span className="scope-value">{country || "-"}</span>
+                </div>
+                <div className="scope-pair">
+                  <span className="scope-label">Business</span>
+                  <span className="scope-value">{business || "-"}</span>
+                </div>
+                <div className="scope-pair">
+                  <span className="scope-label">Channel</span>
+                  <span className="scope-value">{channel || "-"}</span>
+                </div>
+                <div className="scope-pair">
+                  <span className="scope-label">App ID</span>
+                  <span className="scope-value">
+                    {applicationId.trim()
+                      ? applicationId.trim().toUpperCase()
+                      : "-"}
+                  </span>
+                </div>
+                <div className="scope-pair">
+                  <span className="scope-label">File</span>
+                  <span className="scope-value">{editFileName}</span>
+                </div>
+              </div>
+              <div className="modal-json">
+                <label>File JSON</label>
+                <textarea
+                  className="modal-json-textarea"
+                  rows={12}
+                  spellCheck={false}
+                  value={editJson}
+                  onChange={(e) => setEditJson(e.target.value)}
+                />
+                {editError && (
+                  <p className="json-error" aria-live="polite">
+                    {editError}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setEditFileName(null);
+                  setEditJson("");
+                  setEditError("");
+                  setEditSubmitMessage("");
+                  setEditSubmitError("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={editSubmitting}
+                onClick={async () => {
+                  const result = safeParseJson(editJson);
+                  if ("error" in result) {
+                    setEditError(result.error);
+                    return;
+                  }
+                  setEditError("");
+                  const parsed = (result as { value: object }).value;
+                  const keyForSubmit = searchKey || keyPreview || "CONFIG_KEY";
+                  setEditSubmitting(true);
+                  setEditSubmitMessage("");
+                  setEditSubmitError("");
+                  try {
+                    const response = await fetch("/api/app-rule/file-update", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        environment,
+                        country,
+                        business,
+                        channel,
+                        applicationId: applicationId.trim() || null,
+                        key: keyForSubmit,
+                        fileName: editFileName,
+                        config: parsed,
+                      }),
+                    });
+                    if (!response.ok) {
+                      throw new Error(`Request failed with status ${response.status}`);
+                    }
+                    const data = await response.json();
+                    setEditSubmitMessage(
+                      `Update succeeded for file ${data.fileName} (key ${data.key}).`
+                    );
+                    setEditSubmitError("");
+                    setFiles((prev) => {
+                      if (!prev || !editFileName) return prev;
+                      return {
+                        ...prev,
+                        [editFileName]: parsed,
+                      };
+                    });
+                  } catch (error) {
+                    setEditSubmitError(
+                      `Update failed: ${(error as Error).message}. Check console / Network tab for details.`
+                    );
+                    setEditSubmitMessage("");
+                  } finally {
+                    setEditSubmitting(false);
+                  }
+                }}
+              >
+                {editSubmitting ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {deleteFileName && (
+        <div
+          id="delete-modal-search"
+          className={"modal-backdrop" + (deleteModalOpen ? " open" : "")}
+          aria-hidden={!deleteModalOpen}
+        >
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Delete file configuration</h3>
+            </div>
+            <div className="modal-body">
+              {deleteError && (
+                <div className="status-banner status-banner-error">
+                  {deleteError}
+                </div>
+              )}
+              <p className="field-hint">
+                You are about to delete file <b>{deleteFileName}</b> for key{" "}
+                <b>{searchKey || keyPreview || "CONFIG_KEY"}</b>. This will remove the file from
+                the configuration for this key.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setDeleteModalOpen(false);
+                  setDeleteFileName(null);
+                  setDeleteSubmitting(false);
+                  setDeleteError("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={deleteSubmitting}
+                onClick={async () => {
+                  if (!deleteFileName) {
+                    return;
+                  }
+                  setDeleteSubmitting(true);
+                  setDeleteError("");
+                  try {
+                    const keyForSubmit = searchKey || keyPreview || "CONFIG_KEY";
+                    const response = await fetch("/api/app-rule/file-delete", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        environment,
+                        country,
+                        business,
+                        channel,
+                        applicationId: applicationId.trim() || null,
+                        key: keyForSubmit,
+                        fileName: deleteFileName,
+                      }),
+                    });
+                    if (!response.ok) {
+                      throw new Error(`Request failed with status ${response.status}`);
+                    }
+                    setFiles((prev) => {
+                      if (!prev) return prev;
+                      const next: FileConfigMap = { ...prev };
+                      delete next[deleteFileName];
+                      if (Object.keys(next).length === 0) {
+                        return null;
+                      }
+                      return next;
+                    });
+                    setExpanded((prev) => {
+                      const next = { ...prev };
+                      delete next[deleteFileName];
+                      return next;
+                    });
+                    setDeleteModalOpen(false);
+                    setDeleteFileName(null);
+                  } catch (error) {
+                    setDeleteError(
+                      `Delete failed: ${(error as Error).message}. Check console / Network tab for details.`
+                    );
+                  } finally {
+                    setDeleteSubmitting(false);
+                  }
+                }}
+              >
+                {deleteSubmitting ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>

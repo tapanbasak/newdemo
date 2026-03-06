@@ -410,8 +410,16 @@ textarea:focus {
   border-top: 1px solid rgba(148, 163, 184, 0.4);
 }
 
-.file-toggle {
+.file-row {
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.file-toggle {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -430,6 +438,50 @@ textarea:focus {
 .file-toggle-icon {
   font-size: 1rem;
   color: var(--text-soft);
+}
+
+.file-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 10px;
+}
+
+.file-action {
+  border: none;
+  background: transparent;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-action:hover {
+  background: rgba(148, 163, 184, 0.15);
+}
+
+.file-action-danger {
+  color: #dc2626;
+}
+
+.modal-json-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  padding: 7px 10px;
+  font-size: 0.8rem;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  resize: vertical;
+  min-height: 320px;
+  max-height: 320px;
+  overflow: auto;
 }
 
 .file-json {
