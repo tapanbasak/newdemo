@@ -20,11 +20,20 @@ function computeKey({
   includeEnv: boolean;
 }) {
   const parts: string[] = [];
-  if (includeEnv && env) parts.push(env);
-  if (country) parts.push(country);
-  if (business) parts.push(business);
-  if (channel) parts.push(channel);
-  if (appId) parts.push(appId);
+  const push = (value: string | undefined | null) => {
+    const trimmed = (value || "").trim();
+    if (trimmed) {
+      parts.push(trimmed.toUpperCase());
+    }
+  };
+
+  if (includeEnv) {
+    push(env);
+  }
+  push(country);
+  push(business);
+  push(channel);
+  push(appId);
   return parts.join("_");
 }
 
@@ -157,6 +166,10 @@ export default function AppRulePage() {
     }
 
     const baseUrl = getAppRuleBaseUrl(environment);
+    const keyForSubmit = lastReviewKey;
+    const wrappedConfig = {
+      [keyForSubmit]: (parsed as { value: object }).value,
+    };
 
     setSubmitMessage("");
     setSubmitError("");
@@ -174,9 +187,9 @@ export default function AppRulePage() {
           channel,
           applicationId: applicationId.trim() || null,
           crNumber: envRequiresCr ? crNumber.trim() || null : null,
-          key: lastReviewKey,
+          key: keyForSubmit,
           baseUrl,
-          config: (parsed as { value: object }).value,
+          config: wrappedConfig,
         }),
       });
 
@@ -205,16 +218,22 @@ export default function AppRulePage() {
   const reviewCountry = country || "-";
   const reviewBusiness = business || "-";
   const reviewChannel = channel || "-";
-  const reviewAppId = applicationId.trim() || "-";
+  const reviewAppId = applicationId.trim()
+    ? applicationId.trim().toUpperCase()
+    : "-";
   const reviewCr = envRequiresCr && crNumber.trim() ? crNumber.trim() : "-";
-  const reviewJsonStr =
-    configJson.trim() && !("error" in safeParseJson(configJson))
-      ? JSON.stringify(
-          (safeParseJson(configJson) as { value: object }).value,
-          null,
-          2
-        )
-      : "";
+
+  let reviewJsonStr = "";
+  if (configJson.trim()) {
+    const parsedForPreview = safeParseJson(configJson);
+    if (!("error" in parsedForPreview)) {
+      const keyForPreview = lastReviewKey || keyPreview || "CONFIG_KEY";
+      const wrapped = {
+        [keyForPreview]: (parsedForPreview as { value: object }).value,
+      };
+      reviewJsonStr = JSON.stringify(wrapped, null, 2);
+    }
+  }
 
   return (
     <>

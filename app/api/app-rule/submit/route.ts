@@ -10,6 +10,7 @@ type AppRulePayload = {
   key: string;
   baseUrl: string;
   config: unknown;
+  simulateError?: boolean;
 };
 
 export async function POST(request: NextRequest) {
@@ -25,7 +26,19 @@ export async function POST(request: NextRequest) {
     key = "",
     baseUrl = "",
     config,
+    simulateError = false,
   } = body;
+
+  // For UI testing: allow the client to deliberately simulate a backend error.
+  if (simulateError) {
+    return Response.json(
+      {
+        ok: false,
+        message: "Simulated backend error (for error banner demo).",
+      },
+      { status: 500 }
+    );
+  }
 
   // This is a dummy endpoint for the prototype. In a real app, you would
   // call the appropriate microservice using the computed baseUrl and persist
