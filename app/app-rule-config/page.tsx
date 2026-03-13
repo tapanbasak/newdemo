@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
 import { getAppRuleBaseUrl } from "@/env-config";
 
@@ -88,14 +88,20 @@ export default function AppRuleSearchPage() {
   const [editFileName, setEditFileName] = useState<string | null>(null);
   const [editJson, setEditJson] = useState("");
   const [editError, setEditError] = useState("");
-  const [editModalOpen, setEditModalOpen] = useState(false);
   const [editSubmitMessage, setEditSubmitMessage] = useState("");
   const [editSubmitError, setEditSubmitError] = useState("");
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editConfirmOpen, setEditConfirmOpen] = useState(false);
   const [deleteFileName, setDeleteFileName] = useState<string | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [countryInputMode, setCountryInputMode] = useState(false);
+  const [businessInputMode, setBusinessInputMode] = useState(false);
+  const [channelInputMode, setChannelInputMode] = useState(false);
+  const editTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  const addTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
 
   const keyPreview = computeKey({
     env: environment,
@@ -107,6 +113,22 @@ export default function AppRuleSearchPage() {
   });
 
   const envRequiresCr = environment === "PERF" || environment === "PROD";
+
+  useEffect(() => {
+    if (editFileName && editTextAreaRef.current) {
+      // Focus and scroll the inline editor into view when starting an edit.
+      editTextAreaRef.current.focus();
+      editTextAreaRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [editFileName]);
+
+  useEffect(() => {
+    if (addMode && addTextAreaRef.current) {
+      // Focus and scroll the add configuration textarea into view when entering add mode.
+      addTextAreaRef.current.focus();
+      addTextAreaRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [addMode]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,18 +203,27 @@ export default function AppRuleSearchPage() {
   };
 
   const handleEditClick = (name: string, value: unknown) => {
+    setIsDeleteMode(false);
     setEditFileName(name);
     setEditJson(JSON.stringify(value, null, 2));
     setEditError("");
     setEditSubmitMessage("");
     setEditSubmitError("");
-    setEditModalOpen(true);
+    setEditConfirmOpen(false);
   };
 
-  const handleDeleteClick = async (name: string) => {
+  const handleDeleteClick = (name: string, value: unknown) => {
+    // Open the inline editor in delete mode so the user can review JSON before deleting.
+    setIsDeleteMode(true);
+    setEditFileName(name);
+    setEditJson(JSON.stringify(value, null, 2));
+    setEditError("");
+    setEditSubmitMessage("");
+    setEditSubmitError("");
+    setEditConfirmOpen(false);
     setDeleteFileName(name);
     setDeleteError("");
-    setDeleteModalOpen(true);
+    setDeleteModalOpen(false);
   };
 
   const handleAddPreview = (e: React.FormEvent) => {
@@ -289,6 +320,68 @@ export default function AppRuleSearchPage() {
     }
   };
 
+  const handleEditSave = async () => {
+    const result = safeParseJson(editJson);
+    if ("error" in result) {
+      setEditError(result.error);
+      return;
+    }
+    setEditError("");
+    const parsed = (result as { value: object }).value;
+    const keyForSubmit = searchKey || keyPreview || "CONFIG_KEY";
+    setEditSubmitting(true);
+    setEditSubmitMessage("");
+    setEditSubmitError("");
+    try {
+      const response = await fetch("/api/app-rule/file-update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          environment,
+          country,
+          business,
+          channel,
+          applicationId: applicationId.trim() || null,
+          key: keyForSubmit,
+          fileName: editFileName,
+          config: parsed,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+      const data = await response.json();
+      setEditSubmitMessage(
+        `Update succeeded for file ${data.fileName} (key ${data.key}).`
+      );
+      setEditSubmitError("");
+      setFiles((prev) => {
+        if (!prev || !editFileName) return prev;
+        return {
+          ...prev,
+          [editFileName]: parsed,
+        };
+      });
+      // Automatically hide the inline editor a few seconds after a successful save.
+      setTimeout(() => {
+        setEditFileName(null);
+        setEditJson("");
+        setEditError("");
+        setEditSubmitMessage("");
+        setEditSubmitError("");
+      }, 6000);
+    } catch (error) {
+      setEditSubmitError(
+        `Update failed: ${(error as Error).message}. Check console / Network tab for details.`
+      );
+      setEditSubmitMessage("");
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
   return (
     <>
       <AppHeader
@@ -311,8 +404,12 @@ export default function AppRuleSearchPage() {
                   onChange={(e) => setEnvironment(e.target.value)}
                 >
                   <option value="">Select environment</option>
-                  <option value="DEV">DEV</option>
-                  <option value="UAT">UAT</option>
+                  <option value="DEV1">DEV1</option>
+                  <option value="DEV2">DEV2</option>
+                  <option value="DEV3">DEV3</option>
+                  <option value="UAT1">UAT1</option>
+                  <option value="UAT2">UAT2</option>
+                  <option value="UAT3">UAT3</option>
                   <option value="PERF">PERF</option>
                   <option value="PROD">PROD</option>
                 </select>
@@ -321,52 +418,238 @@ export default function AppRuleSearchPage() {
                 <label htmlFor="country-search">
                   Country code<span className="required">*</span>
                 </label>
-                <select
-                  id="country-search"
-                  name="country"
-                  required
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                >
-                  <option value="">Select country</option>
-                  <option value="US">US</option>
-                  <option value="CA">CA</option>
-                  <option value="UK">UK</option>
-                  <option value="SG">SG</option>
-                </select>
+                {!countryInputMode ? (
+                  <select
+                    id="country-search"
+                    name="country"
+                    required
+                    value={country}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "__NEW_COUNTRY__") {
+                        setCountryInputMode(true);
+                        setCountry("");
+                      } else {
+                        setCountry(value);
+                      }
+                    }}
+                  >
+                    <option value="">Select country</option>
+                    <option value="US">US</option>
+                    <option value="CA">CA</option>
+                    <option value="UK">UK</option>
+                    <option value="SG">SG</option>
+                    <option value="__NEW_COUNTRY__">+ Enter new country code</option>
+                  </select>
+                ) : (
+                  <>
+                    <div className="input-with-icon">
+                      <input
+                        id="country-search"
+                        name="country"
+                        type="text"
+                        required
+                        placeholder="e.g. AU"
+                        value={country}
+                        onChange={(e) => setCountry(e.target.value.toUpperCase())}
+                      />
+                      <button
+                        type="button"
+                        className="input-icon-button"
+                        aria-label="Back to country list"
+                        title="Back to country list"
+                        onClick={() => {
+                          setCountryInputMode(false);
+                          setCountry("");
+                        }}
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M11.5 5L7 9.5L11.5 14"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M7 9.5H15"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="field-hint-row">
+                      <p className="field-hint field-hint-compact">
+                        Country code will be used as entered (e.g. AU, IN, HK).
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
               <div className="field">
                 <label htmlFor="business-search">
                   Business code<span className="required">*</span>
                 </label>
-                <select
-                  id="business-search"
-                  name="business"
-                  required
-                  value={business}
-                  onChange={(e) => setBusiness(e.target.value)}
-                >
-                  <option value="">Select business</option>
-                  <option value="GCB">GCB</option>
-                  <option value="CRS">CRS</option>
-                </select>
+                {!businessInputMode ? (
+                  <select
+                    id="business-search"
+                    name="business"
+                    required
+                    value={business}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "__NEW_BUSINESS__") {
+                        setBusinessInputMode(true);
+                        setBusiness("");
+                      } else {
+                        setBusiness(value);
+                      }
+                    }}
+                  >
+                    <option value="">Select business</option>
+                    <option value="GCB">GCB</option>
+                    <option value="CRS">CRS</option>
+                    <option value="__NEW_BUSINESS__">+ Enter new business code</option>
+                  </select>
+                ) : (
+                  <>
+                    <div className="input-with-icon">
+                      <input
+                        id="business-search"
+                        name="business"
+                        type="text"
+                        required
+                        placeholder="e.g. CCB"
+                        value={business}
+                        onChange={(e) => setBusiness(e.target.value.toUpperCase())}
+                      />
+                      <button
+                        type="button"
+                        className="input-icon-button"
+                        aria-label="Back to business list"
+                        title="Back to business list"
+                        onClick={() => {
+                          setBusinessInputMode(false);
+                          setBusiness("");
+                        }}
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M11.5 5L7 9.5L11.5 14"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M7 9.5H15"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="field-hint-row">
+                      <p className="field-hint field-hint-compact">
+                        Business code will be used as entered.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
               <div className="field">
                 <label htmlFor="channel-search">
                   Channel ID<span className="required">*</span>
                 </label>
-                <select
-                  id="channel-search"
-                  name="channel"
-                  required
-                  value={channel}
-                  onChange={(e) => setChannel(e.target.value)}
-                >
-                  <option value="">Select channel</option>
-                  <option value="CBOL">CBOL (Online)</option>
-                  <option value="MOB">MOB (Mobile)</option>
-                  <option value="IVR">IVR</option>
-                </select>
+                {!channelInputMode ? (
+                  <select
+                    id="channel-search"
+                    name="channel"
+                    required
+                    value={channel}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "__NEW_CHANNEL__") {
+                        setChannelInputMode(true);
+                        setChannel("");
+                      } else {
+                        setChannel(value);
+                      }
+                    }}
+                  >
+                    <option value="">Select channel</option>
+                    <option value="CBOL">CBOL (Online)</option>
+                    <option value="MOB">MOB (Mobile)</option>
+                    <option value="IVR">IVR</option>
+                    <option value="__NEW_CHANNEL__">+ Enter new channel id</option>
+                  </select>
+                ) : (
+                  <>
+                    <div className="input-with-icon">
+                      <input
+                        id="channel-search"
+                        name="channel"
+                        type="text"
+                        required
+                        placeholder="e.g. WEB"
+                        value={channel}
+                        onChange={(e) => setChannel(e.target.value.toUpperCase())}
+                      />
+                      <button
+                        type="button"
+                        className="input-icon-button"
+                        aria-label="Back to channel list"
+                        title="Back to channel list"
+                        onClick={() => {
+                          setChannelInputMode(false);
+                          setChannel("");
+                        }}
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M11.5 5L7 9.5L11.5 14"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M7 9.5H15"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="field-hint-row">
+                      <p className="field-hint field-hint-compact">
+                        Channel id will be used as entered.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
               <div className="field">
                 <label htmlFor="applicationId-search">
@@ -491,7 +774,7 @@ export default function AppRuleSearchPage() {
                         <button
                           type="button"
                           className="file-action file-action-danger"
-                          onClick={() => handleDeleteClick(name)}
+                          onClick={() => handleDeleteClick(name, value)}
                           aria-label={`Delete ${name}`}
                           title="Delete"
                         >
@@ -533,6 +816,88 @@ export default function AppRuleSearchPage() {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {editFileName && (
+            <div className="form-section" style={{ marginTop: 16 }}>
+              <h3>
+                {isDeleteMode ? "Review configuration before delete" : "Edit configuration for file"}{" "}
+                {editFileName} (key {searchKey || keyPreview || "CONFIG_KEY"})
+              </h3>
+              {editSubmitMessage && (
+                <div className="status-banner status-banner-success">
+                  {editSubmitMessage}
+                </div>
+              )}
+              {editSubmitError && (
+                <div className="status-banner status-banner-error">
+                  {editSubmitError}
+                </div>
+              )}
+              <div className="field">
+                <div className="label-row">
+                  <label htmlFor="editJson">
+                    File JSON<span className="required">*</span>
+                  </label>
+                </div>
+                <textarea
+                  id="editJson"
+                  name="editJson"
+                  className="modal-json-textarea"
+                  spellCheck={false}
+                  ref={editTextAreaRef}
+                  value={editJson}
+                  onChange={(e) => setEditJson(e.target.value)}
+                />
+                {editError && (
+                  <p className="json-error" aria-live="polite">
+                    {editError}
+                  </p>
+                )}
+              </div>
+              <div className="form-footer">
+                <div className="form-footer-right">
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      setEditFileName(null);
+                      setEditJson("");
+                      setEditError("");
+                      setEditSubmitMessage("");
+                      setEditSubmitError("");
+                      setIsDeleteMode(false);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={isDeleteMode ? deleteSubmitting : editSubmitting}
+                    onClick={() => {
+                      if (isDeleteMode) {
+                        // Open delete confirmation modal
+                        if (editFileName) {
+                          setDeleteFileName(editFileName);
+                          setDeleteModalOpen(true);
+                        }
+                      } else {
+                        setEditConfirmOpen(true);
+                      }
+                    }}
+                  >
+                    {isDeleteMode
+                      ? deleteSubmitting
+                        ? "Deleting..."
+                        : "Delete"
+                      : editSubmitting
+                      ? "Updating..."
+                      : "Update"}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -598,6 +963,7 @@ export default function AppRuleSearchPage() {
                     spellCheck={false}
                     placeholder={ADD_PLACEHOLDER}
                     required
+                    ref={addTextAreaRef}
                     value={addJson}
                     onChange={(e) => setAddJson(e.target.value)}
                   />
@@ -632,11 +998,11 @@ export default function AppRuleSearchPage() {
           )}
         </section>
       </main>
-      {addMode && (
+      {addMode && addModalOpen && (
         <div
           id="review-modal-search"
-          className={"modal-backdrop" + (addModalOpen ? " open" : "")}
-          aria-hidden={!addModalOpen}
+          className={"modal-backdrop open"}
+          aria-hidden={false}
         >
           <div className="modal">
             <div className="modal-header">
@@ -722,85 +1088,27 @@ export default function AppRuleSearchPage() {
           </div>
         </div>
       )}
-      {editFileName && (
+      {editConfirmOpen && editFileName && (
         <div
-          id="edit-modal-search"
-          className={"modal-backdrop" + (editModalOpen ? " open" : "")}
-          aria-hidden={!editModalOpen}
+          id="edit-confirm-modal"
+          className={"modal-backdrop open"}
+          aria-hidden={false}
         >
           <div className="modal">
             <div className="modal-header">
-              <h3>Edit file configuration</h3>
+              <h3>Apply changes to file</h3>
             </div>
             <div className="modal-body">
-              {editSubmitMessage && (
-                <div className="status-banner status-banner-success">
-                  {editSubmitMessage}
-                </div>
-              )}
-              {editSubmitError && (
-                <div className="status-banner status-banner-error">
-                  {editSubmitError}
-                </div>
-              )}
-              <div className="review-scope">
-                <div className="scope-pair">
-                  <span className="scope-label">Environment</span>
-                  <span className="scope-value">{environment || "-"}</span>
-                </div>
-                <div className="scope-pair">
-                  <span className="scope-label">Country</span>
-                  <span className="scope-value">{country || "-"}</span>
-                </div>
-                <div className="scope-pair">
-                  <span className="scope-label">Business</span>
-                  <span className="scope-value">{business || "-"}</span>
-                </div>
-                <div className="scope-pair">
-                  <span className="scope-label">Channel</span>
-                  <span className="scope-value">{channel || "-"}</span>
-                </div>
-                <div className="scope-pair">
-                  <span className="scope-label">App ID</span>
-                  <span className="scope-value">
-                    {applicationId.trim()
-                      ? applicationId.trim().toUpperCase()
-                      : "-"}
-                  </span>
-                </div>
-                <div className="scope-pair">
-                  <span className="scope-label">File</span>
-                  <span className="scope-value">{editFileName}</span>
-                </div>
-              </div>
-              <div className="modal-json">
-                <label>File JSON</label>
-                <textarea
-                  className="modal-json-textarea"
-                  rows={12}
-                  spellCheck={false}
-                  value={editJson}
-                  onChange={(e) => setEditJson(e.target.value)}
-                />
-                {editError && (
-                  <p className="json-error" aria-live="polite">
-                    {editError}
-                  </p>
-                )}
-              </div>
+              <p className="field-hint">
+                Do you want to apply changes for file <b>{editFileName}</b> under key{" "}
+                <b>{searchKey || keyPreview || "CONFIG_KEY"}</b>?
+              </p>
             </div>
             <div className="modal-footer">
               <button
                 type="button"
                 className="btn btn-ghost"
-                onClick={() => {
-                  setEditModalOpen(false);
-                  setEditFileName(null);
-                  setEditJson("");
-                  setEditError("");
-                  setEditSubmitMessage("");
-                  setEditSubmitError("");
-                }}
+                onClick={() => setEditConfirmOpen(false)}
               >
                 Cancel
               </button>
@@ -809,60 +1117,11 @@ export default function AppRuleSearchPage() {
                 className="btn btn-primary"
                 disabled={editSubmitting}
                 onClick={async () => {
-                  const result = safeParseJson(editJson);
-                  if ("error" in result) {
-                    setEditError(result.error);
-                    return;
-                  }
-                  setEditError("");
-                  const parsed = (result as { value: object }).value;
-                  const keyForSubmit = searchKey || keyPreview || "CONFIG_KEY";
-                  setEditSubmitting(true);
-                  setEditSubmitMessage("");
-                  setEditSubmitError("");
-                  try {
-                    const response = await fetch("/api/app-rule/file-update", {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({
-                        environment,
-                        country,
-                        business,
-                        channel,
-                        applicationId: applicationId.trim() || null,
-                        key: keyForSubmit,
-                        fileName: editFileName,
-                        config: parsed,
-                      }),
-                    });
-                    if (!response.ok) {
-                      throw new Error(`Request failed with status ${response.status}`);
-                    }
-                    const data = await response.json();
-                    setEditSubmitMessage(
-                      `Update succeeded for file ${data.fileName} (key ${data.key}).`
-                    );
-                    setEditSubmitError("");
-                    setFiles((prev) => {
-                      if (!prev || !editFileName) return prev;
-                      return {
-                        ...prev,
-                        [editFileName]: parsed,
-                      };
-                    });
-                  } catch (error) {
-                    setEditSubmitError(
-                      `Update failed: ${(error as Error).message}. Check console / Network tab for details.`
-                    );
-                    setEditSubmitMessage("");
-                  } finally {
-                    setEditSubmitting(false);
-                  }
+                  await handleEditSave();
+                  setEditConfirmOpen(false);
                 }}
               >
-                {editSubmitting ? "Saving..." : "Save"}
+                {editSubmitting ? "Saving..." : "Confirm"}
               </button>
             </div>
           </div>
@@ -949,6 +1208,13 @@ export default function AppRuleSearchPage() {
                     });
                     setDeleteModalOpen(false);
                     setDeleteFileName(null);
+                    // Also clear inline editor if it was open in delete mode.
+                    setEditFileName(null);
+                    setEditJson("");
+                    setEditError("");
+                    setEditSubmitMessage("");
+                    setEditSubmitError("");
+                    setIsDeleteMode(false);
                   } catch (error) {
                     setDeleteError(
                       `Delete failed: ${(error as Error).message}. Check console / Network tab for details.`

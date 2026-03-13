@@ -18,7 +18,7 @@ export default function HomePage() {
             </p>
           </div>
           <div className="service-grid" style={{ marginTop: "16px" }}>
-            <Link href="/app-rule" className="service-card" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link href="/app-rule-config" className="service-card" style={{ textDecoration: "none", color: "inherit" }}>
               <div className="service-card-header">
                 <h3>App Rule Service Config</h3>
               </div>
