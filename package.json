@@ -1,41 +1,25 @@
 {
-  "name": "ng-app",
-  "version": "0.0.0",
+  "name": "prompt-catchup-next",
+  "version": "1.0.0",
   "scripts": {
-    "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "private": true,
   "dependencies": {
-    "@angular/animations": "^19.2.18",
-    "@angular/cdk": "^19.2.19",
-    "@angular/common": "^19.2.18",
-    "@angular/compiler": "^19.2.18",
-    "@angular/core": "^19.2.18",
-    "@angular/forms": "^19.2.18",
-    "@angular/material": "^19.2.19",
-    "@angular/platform-browser": "^19.2.18",
-    "@angular/platform-browser-dynamic": "^19.2.18",
-    "@angular/router": "^19.2.18",
-    "@popperjs/core": "^2.11.8",
-    "@softarc/native-federation-node": "^2.0.10",
     "bootstrap": "^5.3.3",
-    "es-module-shims": "^1.5.12",
-    "rxjs": "~7.8.1",
-    "tslib": "^2.3.0",
-    "zone.js": "~0.15.1"
+    "mongodb": "^6.20.0",
+    "next": "^16.0.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@angular-architects/native-federation": "^19.0.23",
-    "@angular-devkit/build-angular": "^19.2.19",
-    "@angular/build": "^19.2.19",
-    "@angular/cli": "^19.2.19",
-    "@angular/compiler-cli": "^19.2.18",
-    "@types/jasmine": "~3.10.0",
-    "jasmine-core": "~4.0.0",
-    "typescript": "~5.7.2"
+    "@types/node": "^24.5.2",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "typescript": "^5.9.2"
   }
 }

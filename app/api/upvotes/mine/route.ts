@@ -1,0 +1,20 @@
+import { getDb, hasMongo } from "@/lib/db";
+import { memoryStore } from "@/lib/store";
+import { NextResponse } from "next/server";
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const userId = searchParams.get("userId");
+  if (!userId) return NextResponse.json([]);
+
+  if (hasMongo()) {
+    const db = await getDb();
+    const rows = await db!
+      .collection("upvotes")
+      .find({ userId }, { projection: { _id: 0 } })
+      .toArray();
+    return NextResponse.json(rows);
+  }
+
+  return NextResponse.json(memoryStore.upvotes.filter((u) => u.userId === userId));
+}

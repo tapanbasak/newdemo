@@ -1,0 +1,28 @@
+<div class="agent-card">
+  <div class="card-header">
+    <div class="hexagon-icon">
+      <svg viewBox="0 0 100 100" width="40" height="40">
+        <polygon
+          points="50,3 93,25 93,75 50,97 7,75 7,25"
+          fill="var(--pcu-navy, #0a1929)"
+          stroke="var(--pcu-blue, #1976d2)"
+          stroke-width="3"
+        />
+        <text x="50" y="58" text-anchor="middle" fill="#fff" font-size="28" font-weight="600">
+          {{ agent.name.charAt(0) }}
+        </text>
+      </svg>
+    </div>
+    <span class="status-badge" [class]="statusClass">{{ statusLabel }}</span>
+  </div>
+
+  <h4 class="agent-name">{{ agent.name }}</h4>
+  <p class="agent-description">{{ agent.description }}</p>
+
+  <div class="card-footer">
+    <span class="prompt-count">{{ agent.promptCount }} prompts</span>
+    <button type="button" class="learn-more" (click)="goToCatalog()">
+      Learn More &rarr;
+    </button>
+  </div>
+</div>

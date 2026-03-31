@@ -1,0 +1,119 @@
+[
+  {
+    "agentId": 1,
+    "title": "Technology Adherence Manager Prompt Catalog",
+    "subtitle": "Understand Citi adherence policies",
+    "totalPrompts": 76,
+    "prompts": [
+      {
+        "id": 1,
+        "title": "Generate CSC KPI for Work Effort",
+        "prompt": "Review the Desired Outcomes and Project Objectives, then propose CSC, KPI, KPI value type, and KPI target date for this work effort.",
+        "description": "As a Project Manager, review the Desired Outcome(s) and Project Objective(s) to generate CSC, KPI, KPI Value Type, and KPI Target Date for the work effort. Use this prompt to structure measurable items that can be tracked throughout the project lifecycle.",
+        "certified": true,
+        "upvotes": 26,
+        "author": "Rathinam, Archana [TECH]",
+        "timesSaved": "30 Minutes",
+        "tip": "Ensure the Project Description and Project Objective are clear and concise for effective output.",
+        "lastUpdated": "07/04"
+      },
+      {
+        "id": 2,
+        "title": "Review CSC KPI and Refine Project Description for Projects",
+        "prompt": "Given an existing project description and KPIs, identify gaps and suggest refined wording.",
+        "description": "CSC is Critical Success Criteria; this prompt helps validate measurable success terms.",
+        "certified": true,
+        "upvotes": 13,
+        "author": "Rathinam, Archana [TECH]",
+        "timesSaved": "15 Minutes",
+        "lastUpdated": "07/03"
+      }
+    ]
+  },
+  {
+    "agentId": 5,
+    "title": "Release Engineering Agent Prompt Catalog",
+    "subtitle": "Automates release pipelines, version management, and deployment artifacts.",
+    "totalPrompts": 42,
+    "prompts": [
+      {
+        "id": 1,
+        "title": "Write User Story from Feature Brief",
+        "prompt": "From this feature brief and acceptance criteria, draft a user story.",
+        "description": "Generate a user story and acceptance criteria from a feature brief.",
+        "certified": true,
+        "upvotes": 18,
+        "author": "Sarah Chen [PROD]"
+      },
+      {
+        "id": 2,
+        "title": "Refine Backlog and Prioritize by Value",
+        "prompt": "Review this backlog and prioritize based on value, dependencies, and risk.",
+        "description": "Suggest a priority order for backlog items with a short rationale.",
+        "certified": false,
+        "upvotes": 9,
+        "author": "David Park [PROD]"
+      }
+    ]
+  },
+  {
+    "agentId": 3,
+    "title": "Production Agent Prompt Catalog",
+    "subtitle": "Deployments, rollbacks, and incident response",
+    "totalPrompts": 31,
+    "prompts": [
+      {
+        "id": 1,
+        "title": "Rollback Runbook from Release Notes",
+        "prompt": "From release notes and deployment steps, create a rollback runbook.",
+        "description": "Generate a rollback runbook with pre-conditions, steps, and checks.",
+        "certified": true,
+        "upvotes": 22,
+        "author": "Ops Team [INFRA]"
+      },
+      {
+        "id": 2,
+        "title": "Incident Summary for Post-Mortem",
+        "prompt": "Using incident information, draft a post-mortem summary.",
+        "description": "Draft a blameless incident summary with timeline and follow-up actions.",
+        "certified": false,
+        "upvotes": 7,
+        "author": "Ops Team [INFRA]"
+      }
+    ]
+  },
+  {
+    "agentId": 11,
+    "title": "Devin AI Prompt Catalog",
+    "subtitle": "End-to-end software engineering assistance",
+    "totalPrompts": 24,
+    "prompts": [
+      {
+        "id": 1,
+        "title": "Generate Implementation Plan from Ticket",
+        "prompt": "From this ticket, propose implementation plan, tests, and rollout steps.",
+        "description": "Generate an implementation plan from a Jira ticket or feature request.",
+        "certified": true,
+        "upvotes": 16,
+        "author": "Devin AI Team"
+      }
+    ]
+  },
+  {
+    "agentId": 21,
+    "title": "Incident Manager Prompt Catalog",
+    "subtitle": "Triage, communication, and follow-up",
+    "totalPrompts": 22,
+    "prompts": [
+      {
+        "id": 1,
+        "title": "Draft Initial Incident Bridge Announcement",
+        "prompt": "From these incident details, draft a concise bridge announcement.",
+        "description": "Draft an incident bridge announcement with impact and next update time.",
+        "certified": true,
+        "upvotes": 13,
+        "author": "Incident Mgmt [OPS]"
+      }
+    ]
+  }
+]
