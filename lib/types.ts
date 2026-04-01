@@ -10,6 +10,8 @@ export interface Agent {
   promptCount: number;
   updatedDate?: string;
   category: string;
+  roleTags?: string[];
+  usageCount?: number;
 }
 
 export interface Group {

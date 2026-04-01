@@ -25,12 +25,20 @@ export async function upvotePrompt(input: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...input, userId }),
   });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Unable to upvote right now.");
+  }
   return res.json();
 }
 
 export async function getMyUpvotes() {
   const userId = getUserId();
   const res = await fetch(`/api/upvotes/mine?userId=${encodeURIComponent(userId)}`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Unable to load your upvotes.");
+  }
   return (await res.json()) as Array<{
     agentId: number;
     promptId: number;
@@ -42,6 +50,10 @@ export async function getMyUpvotes() {
 
 export async function getUpvoteCounts() {
   const res = await fetch("/api/upvotes/counts");
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Unable to load upvote counts.");
+  }
   return (await res.json()) as Record<string, number>;
 }
 
@@ -51,11 +63,19 @@ export async function sharePrompt(payload: SharedPrompt) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Unable to share prompt right now.");
+  }
   return res.json();
 }
 
 export async function fetchSharedPrompts() {
   const res = await fetch("/api/shared-prompts");
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Unable to load shared prompts.");
+  }
   return (await res.json()) as SharedPrompt[];
 }
 

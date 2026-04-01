@@ -1,5 +1,4 @@
 import { getDb, hasMongo } from "@/lib/db";
-import { memoryStore } from "@/lib/store";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -15,21 +14,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  if (hasMongo()) {
-    const db = await getDb();
-    const exists = await db!.collection("upvotes").findOne({
-      agentId: body.agentId,
-      promptId: body.promptId,
-      userId: body.userId,
-    });
-    if (exists) return NextResponse.json({ ok: true, alreadyUpvoted: true });
-    await db!.collection("upvotes").insertOne({ ...body, createdAt: new Date() });
-    return NextResponse.json({ ok: true, alreadyUpvoted: false });
+  if (!hasMongo()) {
+    return NextResponse.json({ error: "MongoDB is not configured" }, { status: 500 });
   }
 
-  const exists = memoryStore.upvotes.some(
-    (u) => u.agentId === body.agentId && u.promptId === body.promptId && u.userId === body.userId
-  );
-  if (!exists) memoryStore.upvotes.push(body);
-  return NextResponse.json({ ok: true, alreadyUpvoted: exists });
+  const db = await getDb();
+  const exists = await db!.collection("upvotes").findOne({
+    agentId: body.agentId,
+    promptId: body.promptId,
+    userId: body.userId,
+  });
+  if (exists) return NextResponse.json({ ok: true, alreadyUpvoted: true });
+  await db!.collection("upvotes").insertOne({ ...body, createdAt: new Date() });
+  return NextResponse.json({ ok: true, alreadyUpvoted: false });
 }

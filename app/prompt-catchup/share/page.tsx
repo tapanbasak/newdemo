@@ -1,16 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
-import { AGENTS, GROUPS } from "@/lib/data";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { Agent, Group } from "@/lib/types";
 import { sharePrompt } from "@/lib/client-api";
 
 export default function SharePromptPage() {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [audience, setAudience] = useState<string[]>([]);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [attachments, setAttachments] = useState("");
   const [success, setSuccess] = useState(false);
-  const audienceGroups = useMemo(() => GROUPS.filter((g) => g.slug !== "my-upvotes"), []);
+  const [error, setError] = useState("");
+  const audienceGroups = useMemo(() => groups.filter((g) => g.slug !== "my-upvotes"), [groups]);
+
+  async function loadShareData() {
+    setError("");
+    try {
+      const data = await fetch("/api/home").then(async (r) => {
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          throw new Error(data?.error || "Unable to load share form data.");
+        }
+        return r.json();
+      });
+      setAgents(data.agents ?? []);
+      setGroups(data.groups ?? []);
+    } catch (err) {
+      setAgents([]);
+      setGroups([]);
+      const message = err instanceof Error ? err.message : "Unable to load share form data.";
+      setError(message);
+    }
+  }
+
+  useEffect(() => {
+    loadShareData();
+  }, []);
 
   function isAudienceSelected(identifier: string) {
     return audience.includes(identifier);
@@ -32,7 +59,7 @@ export default function SharePromptPage() {
   }
 
   function getAgentsForGroup(groupSlug: string) {
-    return AGENTS.filter((a) => a.category === groupSlug);
+    return agents.filter((a) => a.category === groupSlug);
   }
 
   function onAttachmentsSelected(event: ChangeEvent<HTMLInputElement>) {
@@ -43,22 +70,34 @@ export default function SharePromptPage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSuccess(false);
+    setError("");
+    const selectedAgentCount = audience.filter((token) => token.startsWith("agent:")).length;
+    if (!selectedAgentCount) {
+      setError("Please select at least one Agent/Assistant in audience.");
+      return;
+    }
     const formEl = event.currentTarget;
     const form = new FormData(formEl);
-    await sharePrompt({
-      title: String(form.get("title") || ""),
-      createdBy: String(form.get("createdBy") || ""),
-      createdBySoeid: String(form.get("createdBySoeid") || ""),
-      audience: audience.join(", "),
-      prompt: String(form.get("prompt") || ""),
-      description: String(form.get("description") || ""),
-      attachments,
-    });
-    formEl.reset();
-    setAudience([]);
-    setExpandedGroups(new Set());
-    setAttachments("");
-    setSuccess(true);
+    try {
+      await sharePrompt({
+        title: String(form.get("title") || ""),
+        createdBy: String(form.get("createdBy") || ""),
+        createdBySoeid: String(form.get("createdBySoeid") || ""),
+        audience: audience.join(", "),
+        prompt: String(form.get("prompt") || ""),
+        description: String(form.get("description") || ""),
+        attachments,
+      });
+      formEl.reset();
+      setAudience([]);
+      setExpandedGroups(new Set());
+      setAttachments("");
+      setSuccess(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to submit prompt.";
+      setError(message);
+    }
   }
 
   return (
@@ -86,6 +125,14 @@ export default function SharePromptPage() {
 
         <main className="share-main">
           {success ? <div className="success-banner">Your prompt has been shared successfully.</div> : null}
+          {error ? (
+            <div className="error-banner">
+              {error}{" "}
+              <button type="button" className="error-retry-btn" onClick={loadShareData}>
+                Retry
+              </button>
+            </div>
+          ) : null}
           <h1 className="page-title">Share Your Prompt</h1>
           <section className="section">
             <h2 className="section-title">Basic Information</h2>

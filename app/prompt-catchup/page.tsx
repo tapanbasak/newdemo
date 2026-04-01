@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { AGENTS, GROUPS, SCOREBOARD_DATA, SIDEBAR_LINKS } from "@/lib/data";
 import { filterAgents } from "@/lib/filter";
-import { PromptCatalog, SortBy } from "@/lib/types";
-import { fetchSharedPrompts, getMyUpvotes } from "@/lib/client-api";
-import { AGENT_VIEW_META, CURRENT_USER_ROLE, ViewMode } from "@/lib/view-meta";
+import { Agent, Group, SortBy } from "@/lib/types";
+import { getMyUpvotes } from "@/lib/client-api";
+import { CURRENT_USER_ROLE, ViewMode } from "@/lib/view-meta";
+
+type ScoreboardRow = { ranking: string; name: string; value: string };
+type Scoreboard = { title: string; columns: string[]; rows: ScoreboardRow[]; footnote?: string };
 
 export default function PromptCatchupPage() {
   const [search, setSearch] = useState("");
@@ -14,7 +16,10 @@ export default function PromptCatchupPage() {
   const [sort, setSort] = useState<SortBy>("most_prompts");
   const [group, setGroup] = useState<string | null>(null);
   const [myCount, setMyCount] = useState(0);
-  const [agents, setAgents] = useState(AGENTS);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [scoreboards, setScoreboards] = useState<Scoreboard[]>([]);
+  const [sidebarLinks, setSidebarLinks] = useState<Array<{ label: string; href?: string }>>([]);
   const [promptTextsByAgent, setPromptTextsByAgent] = useState<Record<number, string[]>>({});
   const [myUpvotes, setMyUpvotes] = useState<
     Array<{ title?: string; description?: string; author?: string; upvotes?: number }>
@@ -22,50 +27,39 @@ export default function PromptCatchupPage() {
   const [promptSearch, setPromptSearch] = useState("");
   const [showCertifiedOnly, setShowCertifiedOnly] = useState(false);
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
+  const [loadError, setLoadError] = useState("");
+
+  async function loadHomeData() {
+    setLoadError("");
+    try {
+      const [myUpvotes, homeData] = await Promise.all([
+      getMyUpvotes().catch(() => []),
+      fetch("/api/home").then(async (r) => {
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          throw new Error(data?.error || "Unable to load home data.");
+        }
+        return r.json();
+      }),
+      ]);
+      setMyCount(myUpvotes.length);
+      setMyUpvotes(myUpvotes);
+      setAgents(homeData.agents ?? []);
+      setGroups(homeData.groups ?? []);
+      setScoreboards(homeData.scoreboards ?? []);
+      setSidebarLinks(homeData.sidebarLinks ?? []);
+      setPromptTextsByAgent(homeData.promptTextsByAgent ?? {});
+    } catch {
+      setAgents([]);
+      setGroups([]);
+      setScoreboards([]);
+      setSidebarLinks([]);
+      setLoadError("Unable to load home data right now. Please check MongoDB connection and try again.");
+    }
+  }
 
   useEffect(() => {
-    Promise.all([
-      getMyUpvotes().catch(() => []),
-      fetch("/assets/prompt-catalog-sample.json").then((r) => r.json() as Promise<PromptCatalog[]>),
-      fetchSharedPrompts().catch(() => []),
-    ])
-      .then(([myUpvotes, catalogs, sharedPrompts]) => {
-        setMyCount(myUpvotes.length);
-        setMyUpvotes(myUpvotes);
-
-        const counts: Record<number, number> = {};
-        const textsByAgent: Record<number, string[]> = {};
-
-        for (const cat of catalogs) {
-          counts[cat.agentId] = cat.prompts?.length ?? 0;
-          const texts: string[] = [];
-          for (const p of cat.prompts ?? []) {
-            if (p.prompt) texts.push(p.prompt);
-            if (p.description) texts.push(p.description);
-          }
-          textsByAgent[cat.agentId] = texts;
-        }
-
-        for (const p of sharedPrompts) {
-          const audience = (p.audience ?? "")
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean);
-          for (const a of audience) {
-            const m = /^agent:(\d+)$/.exec(a);
-            if (!m) continue;
-            const id = Number(m[1]);
-            counts[id] = (counts[id] ?? 0) + 1;
-            if (!textsByAgent[id]) textsByAgent[id] = [];
-            if (p.prompt) textsByAgent[id].push(p.prompt);
-            if (p.description) textsByAgent[id].push(p.description);
-          }
-        }
-
-        setPromptTextsByAgent(textsByAgent);
-        setAgents((prev) => prev.map((agent) => ({ ...agent, promptCount: counts[agent.id] ?? 0 })));
-      })
-      .catch(() => setAgents(AGENTS));
+    loadHomeData();
   }, []);
 
   const filteredAgents = useMemo(() => {
@@ -84,8 +78,8 @@ export default function PromptCatchupPage() {
 
     if (viewMode === "most_used") {
       return [...searched].sort((a, b) => {
-        const uA = AGENT_VIEW_META[a.id]?.usageCount ?? 0;
-        const uB = AGENT_VIEW_META[b.id]?.usageCount ?? 0;
+        const uA = a.usageCount ?? 0;
+        const uB = b.usageCount ?? 0;
         return uB - uA || b.promptCount - a.promptCount;
       });
     }
@@ -93,18 +87,18 @@ export default function PromptCatchupPage() {
     const matched: typeof searched = [];
     const unmatched: typeof searched = [];
     for (const agent of searched) {
-      const tags = AGENT_VIEW_META[agent.id]?.roleTags ?? [];
+      const tags = agent.roleTags ?? [];
       if (tags.includes(CURRENT_USER_ROLE)) matched.push(agent);
       else unmatched.push(agent);
     }
     matched.sort((a, b) => {
-      const uA = AGENT_VIEW_META[a.id]?.usageCount ?? 0;
-      const uB = AGENT_VIEW_META[b.id]?.usageCount ?? 0;
+      const uA = a.usageCount ?? 0;
+      const uB = b.usageCount ?? 0;
       return uB - uA || b.promptCount - a.promptCount;
     });
     unmatched.sort((a, b) => {
-      const uA = AGENT_VIEW_META[a.id]?.usageCount ?? 0;
-      const uB = AGENT_VIEW_META[b.id]?.usageCount ?? 0;
+      const uA = a.usageCount ?? 0;
+      const uB = b.usageCount ?? 0;
       return uB - uA || b.promptCount - a.promptCount;
     });
     return [...matched, ...unmatched];
@@ -112,7 +106,7 @@ export default function PromptCatchupPage() {
 
   const groupsWithCounts = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return GROUPS.map((g) => {
+    return groups.map((g) => {
       if (g.slug === "my-upvotes") return { ...g, count: myCount };
       let list = filterAgents(agents, "", "all", "most_prompts", g.slug);
       if (q) {
@@ -124,7 +118,7 @@ export default function PromptCatchupPage() {
       }
       return { ...g, count: list.length };
     });
-  }, [agents, search, myCount, promptTextsByAgent]);
+  }, [agents, groups, search, myCount, promptTextsByAgent]);
 
   const filteredMyUpvotes = useMemo(() => {
     if (group !== "my-upvotes") return [];
@@ -169,8 +163,16 @@ export default function PromptCatchupPage() {
       </div>
 
       <div className="container-fluid pcu-page-body">
+        {loadError ? (
+          <div className="error-banner">
+            {loadError}{" "}
+            <button type="button" className="error-retry-btn" onClick={loadHomeData}>
+              Retry
+            </button>
+          </div>
+        ) : null}
         <div className="row g-3 pcu-scoreboards">
-          {SCOREBOARD_DATA.map((board) => (
+          {scoreboards.map((board) => (
             <div className="col-12 col-md-4" key={board.title}>
               <div className="pcu-scoreboard-card">
                 <h3 className="pcu-scoreboard-title">{board.title}</h3>
@@ -215,7 +217,7 @@ export default function PromptCatchupPage() {
                 ))}
               </div>
               <div className="pcu-sidebar-links">
-                {SIDEBAR_LINKS.map((link) => (
+                {sidebarLinks.map((link) => (
                   link.href ? (
                     <Link key={link.label} href={link.href} className="pcu-sidebar-link">
                       {link.label}

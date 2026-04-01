@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { addComment, fetchComments, fetchSharedPrompts, getMyUpvotes, getUpvoteCounts, upvotePrompt } from "@/lib/client-api";
-import { AGENTS } from "@/lib/data";
+import { addComment, fetchComments, getMyUpvotes, upvotePrompt } from "@/lib/client-api";
 import { PromptCatalog, PromptCatalogItem } from "@/lib/types";
 
 export default function PromptDetailPage({
@@ -19,6 +18,27 @@ export default function PromptDetailPage({
   const [upvoted, setUpvoted] = useState(false);
   const [catalog, setCatalog] = useState<PromptCatalog | null>(null);
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
+  const [error, setError] = useState("");
+
+  async function loadPageData(targetAgentId: number, targetPromptId: number) {
+    if (!targetAgentId || !targetPromptId) return;
+    setError("");
+    try {
+      const [p, cat, c, my] = await Promise.all([
+        loadPrompt(targetAgentId, targetPromptId),
+        loadCatalog(targetAgentId),
+        fetchComments(targetAgentId, targetPromptId),
+        getMyUpvotes(),
+      ]);
+      setPrompt(p);
+      setCatalog(cat);
+      setComments(c);
+      setUpvoted(my.some((m) => m.agentId === targetAgentId && m.promptId === targetPromptId));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to load prompt details.";
+      setError(message);
+    }
+  }
 
   useEffect(() => {
     params.then((p) => {
@@ -29,25 +49,26 @@ export default function PromptDetailPage({
 
   useEffect(() => {
     if (!agentId || !promptId) return;
-    Promise.all([loadPrompt(agentId, promptId), loadCatalog(agentId), fetchComments(agentId, promptId), getMyUpvotes()]).then(([p, cat, c, my]) => {
-      setPrompt(p);
-      setCatalog(cat);
-      setComments(c);
-      setUpvoted(my.some((m) => m.agentId === agentId && m.promptId === promptId));
-    });
+    loadPageData(agentId, promptId);
   }, [agentId, promptId]);
 
   async function handleUpvote() {
     if (!prompt || upvoted) return;
-    await upvotePrompt({
-      agentId,
-      promptId,
-      title: prompt.title,
-      description: prompt.description,
-      author: prompt.author,
-    });
-    setPrompt({ ...prompt, upvotes: prompt.upvotes + 1 });
-    setUpvoted(true);
+    setError("");
+    try {
+      await upvotePrompt({
+        agentId,
+        promptId,
+        title: prompt.title,
+        description: prompt.description,
+        author: prompt.author,
+      });
+      setPrompt({ ...prompt, upvotes: prompt.upvotes + 1 });
+      setUpvoted(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to upvote prompt.";
+      setError(message);
+    }
   }
 
   async function handleComment() {
@@ -59,11 +80,32 @@ export default function PromptDetailPage({
     setCommentText("");
   }
 
-  if (!prompt) return <div className="pcu-container">Loading...</div>;
+  if (!prompt) {
+    return (
+      <div className="pcu-container">
+        {error ? (
+          <div className="error-banner">
+            {error}{" "}
+            <button type="button" className="error-retry-btn" onClick={() => loadPageData(agentId, promptId)}>
+              Retry
+            </button>
+          </div>
+        ) : "Loading..."}
+      </div>
+    );
+  }
 
   return (
     <div className="detail-page-wrapper pcu-page-body">
       {showCopiedMessage ? <div className="copy-toast" role="status">Prompt copied</div> : null}
+      {error ? (
+        <div className="error-banner">
+          {error}{" "}
+          <button type="button" className="error-retry-btn" onClick={() => loadPageData(agentId, promptId)}>
+            Retry
+          </button>
+        </div>
+      ) : null}
       <nav className="breadcrumb">
         <Link href="/prompt-catchup">Prompt Catch Up</Link>
         <span className="breadcrumb-separator">/</span>
@@ -193,83 +235,15 @@ export default function PromptDetailPage({
 }
 
 async function loadPrompt(agentId: number, promptId: number): Promise<PromptCatalogItem | null> {
-  const [baseRes, shared, counts] = await Promise.all([
-    fetch("/assets/prompt-catalog-sample.json"),
-    fetchSharedPrompts(),
-    getUpvoteCounts(),
-  ]);
-  const list = (await baseRes.json()) as PromptCatalog[];
-  const found = list.find((c) => c.agentId === agentId);
-  const agent = AGENTS.find((a) => a.id === agentId);
-  const base: PromptCatalog =
-    found ??
-    ({
-      agentId,
-      title: `${agent?.name ?? "Agent"} Prompt Catalog`,
-      subtitle: "",
-      totalPrompts: 0,
-      prompts: [],
-    } as PromptCatalog);
-  const sharedItems = shared
-    .filter((p) =>
-      p.audience
-        .split(",")
-        .map((x) => x.trim())
-        .includes(`agent:${agentId}`)
-    )
-    .map((p, idx) => ({
-      id: 1000 + idx,
-      title: p.title,
-      prompt: p.prompt,
-      description: p.description || p.prompt,
-      certified: false,
-      upvotes: 0,
-      author: p.createdBy,
-    }));
-  const merged = [...base.prompts, ...sharedItems].map((p) => ({
-    ...p,
-    upvotes: counts[`${agentId}_${p.id}`] ?? p.upvotes,
-  }));
+  const res = await fetch(`/api/catalog/${agentId}`);
+  if (!res.ok) return null;
+  const base = (await res.json()) as PromptCatalog;
+  const merged = base.prompts;
   return merged.find((m) => m.id === promptId) ?? null;
 }
 
 async function loadCatalog(agentId: number): Promise<PromptCatalog | null> {
-  const [baseRes, shared, counts] = await Promise.all([
-    fetch("/assets/prompt-catalog-sample.json"),
-    fetchSharedPrompts(),
-    getUpvoteCounts(),
-  ]);
-  const list = (await baseRes.json()) as PromptCatalog[];
-  const found = list.find((c) => c.agentId === agentId);
-  const agent = AGENTS.find((a) => a.id === agentId);
-  const base: PromptCatalog =
-    found ??
-    ({
-      agentId,
-      title: `${agent?.name ?? "Agent"} Prompt Catalog`,
-      subtitle: "",
-      totalPrompts: 0,
-      prompts: [],
-    } as PromptCatalog);
-  const sharedItems = shared
-    .filter((p) =>
-      p.audience
-        .split(",")
-        .map((x) => x.trim())
-        .includes(`agent:${agentId}`)
-    )
-    .map((p, idx) => ({
-      id: 1000 + idx,
-      title: p.title,
-      prompt: p.prompt,
-      description: p.description || p.prompt,
-      certified: false,
-      upvotes: 0,
-      author: p.createdBy,
-    }));
-  const prompts = [...base.prompts, ...sharedItems].map((p) => ({
-    ...p,
-    upvotes: counts[`${agentId}_${p.id}`] ?? p.upvotes,
-  }));
-  return { ...base, prompts, totalPrompts: prompts.length };
+  const res = await fetch(`/api/catalog/${agentId}`);
+  if (!res.ok) return null;
+  return (await res.json()) as PromptCatalog;
 }

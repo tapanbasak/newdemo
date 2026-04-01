@@ -2,31 +2,40 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { fetchSharedPrompts, getMyUpvotes, getUpvoteCounts, upvotePrompt } from "@/lib/client-api";
-import { AGENTS } from "@/lib/data";
-import { PromptCatalog, PromptCatalogItem, SharedPrompt } from "@/lib/types";
+import { getMyUpvotes, upvotePrompt } from "@/lib/client-api";
+import { PromptCatalog, PromptCatalogItem } from "@/lib/types";
 
-async function loadBaseCatalog(agentId: number): Promise<PromptCatalog> {
-  const res = await fetch("/assets/prompt-catalog-sample.json");
-  const all = (await res.json()) as PromptCatalog[];
-  const found = all.find((c) => c.agentId === agentId);
-  if (found) return found;
-  const agent = AGENTS.find((a) => a.id === agentId);
-  return {
-    agentId,
-    title: `${agent?.name ?? "Agent"} Prompt Catalog`,
-    subtitle: "",
-    totalPrompts: 0,
-    prompts: [],
-  };
+async function loadCatalog(agentId: number): Promise<PromptCatalog> {
+  const res = await fetch(`/api/catalog/${agentId}`);
+  if (!res.ok) {
+    throw new Error("Failed to load catalog");
+  }
+  return (await res.json()) as PromptCatalog;
 }
 
 export default function PromptCatalogPage({ params }: { params: Promise<{ agentId: string }> }) {
   const [agentId, setAgentId] = useState(0);
   const [catalog, setCatalog] = useState<PromptCatalog | null>(null);
+  const [search, setSearch] = useState("");
   const [showCertifiedOnly, setShowCertifiedOnly] = useState(false);
   const [mine, setMine] = useState<Record<string, boolean>>({});
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
+  const [error, setError] = useState("");
+
+  async function loadPageData(targetAgentId: number) {
+    if (!targetAgentId) return;
+    setError("");
+    try {
+      const [catalogData, my] = await Promise.all([loadCatalog(targetAgentId), getMyUpvotes()]);
+      setCatalog(catalogData);
+      const myMap: Record<string, boolean> = {};
+      my.forEach((m) => (myMap[`${m.agentId}_${m.promptId}`] = true));
+      setMine(myMap);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to load catalog.";
+      setError(message);
+    }
+  }
 
   useEffect(() => {
     params.then((p) => setAgentId(Number(p.agentId)));
@@ -34,40 +43,45 @@ export default function PromptCatalogPage({ params }: { params: Promise<{ agentI
 
   useEffect(() => {
     if (!agentId) return;
-    Promise.all([loadBaseCatalog(agentId), fetchSharedPrompts(), getUpvoteCounts(), getMyUpvotes()]).then(
-      ([base, shared, counts, my]) => {
-        const promptList = mergeCatalog(base, shared, counts);
-        setCatalog({ ...base, prompts: promptList, totalPrompts: promptList.length });
-        const myMap: Record<string, boolean> = {};
-        my.forEach((m) => (myMap[`${m.agentId}_${m.promptId}`] = true));
-        setMine(myMap);
-      }
-    );
+    loadPageData(agentId);
   }, [agentId]);
 
   const filtered = useMemo(() => {
     if (!catalog) return [];
-    return showCertifiedOnly ? catalog.prompts.filter((p) => p.certified) : catalog.prompts;
-  }, [catalog, showCertifiedOnly]);
+    const base = showCertifiedOnly ? catalog.prompts.filter((p) => p.certified) : catalog.prompts;
+    const q = search.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter((p) =>
+      [p.title, p.prompt ?? "", p.description ?? ""].some((text) =>
+        String(text).toLowerCase().includes(q)
+      )
+    );
+  }, [catalog, showCertifiedOnly, search]);
 
   async function onUpvote(prompt: PromptCatalogItem) {
-    await upvotePrompt({
-      agentId,
-      promptId: prompt.id,
-      title: prompt.title,
-      description: prompt.description,
-      author: prompt.author,
-    });
-    const key = `${agentId}_${prompt.id}`;
-    setMine((prev) => ({ ...prev, [key]: true }));
-    setCatalog((prev) =>
-      prev
-        ? {
-            ...prev,
-            prompts: prev.prompts.map((p) => (p.id === prompt.id ? { ...p, upvotes: p.upvotes + 1 } : p)),
-          }
-        : prev
-    );
+    setError("");
+    try {
+      await upvotePrompt({
+        agentId,
+        promptId: prompt.id,
+        title: prompt.title,
+        description: prompt.description,
+        author: prompt.author,
+      });
+      const key = `${agentId}_${prompt.id}`;
+      setMine((prev) => ({ ...prev, [key]: true }));
+      setCatalog((prev) =>
+        prev
+          ? {
+              ...prev,
+              prompts: prev.prompts.map((p) => (p.id === prompt.id ? { ...p, upvotes: p.upvotes + 1 } : p)),
+            }
+          : prev
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to upvote prompt.";
+      setError(message);
+    }
   }
 
   function onRunPrompt(prompt: PromptCatalogItem) {
@@ -83,6 +97,14 @@ export default function PromptCatalogPage({ params }: { params: Promise<{ agentI
   return (
     <div className="catalog-page-wrapper pcu-page-body">
       {showCopiedMessage ? <div className="copy-toast" role="status">Prompt copied</div> : null}
+      {error ? (
+        <div className="error-banner">
+          {error}{" "}
+          <button type="button" className="error-retry-btn" onClick={() => loadPageData(agentId)}>
+            Retry
+          </button>
+        </div>
+      ) : null}
       <nav className="breadcrumb">
         <Link href="/prompt-catchup">Prompt Catch Up</Link>
         <span className="breadcrumb-separator">/</span>
@@ -91,7 +113,12 @@ export default function PromptCatalogPage({ params }: { params: Promise<{ agentI
       <div className="catalog-page">
         <div className="catalog-sidebar">
           <div className="sidebar-search">
-            <input className="sidebar-search-input" placeholder="Search for Prompts" />
+            <input
+              className="sidebar-search-input"
+              placeholder="Search for Prompts"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
           <nav className="sidebar-nav">
             <Link href="/prompt-catchup" className="sidebar-link">Home</Link>
@@ -182,30 +209,4 @@ export default function PromptCatalogPage({ params }: { params: Promise<{ agentI
       </div>
     </div>
   );
-}
-
-function mergeCatalog(
-  base: PromptCatalog,
-  shared: SharedPrompt[],
-  counts: Record<string, number>
-): PromptCatalogItem[] {
-  const sharedForAgent = shared.filter((p) =>
-    p.audience
-      .split(",")
-      .map((x) => x.trim())
-      .includes(`agent:${base.agentId}`)
-  );
-  const sharedItems = sharedForAgent.map((p, idx) => ({
-    id: 1000 + idx,
-    title: p.title,
-    prompt: p.prompt,
-    description: p.description || p.prompt,
-    certified: false,
-    upvotes: 0,
-    author: p.createdBy,
-  }));
-  return [...base.prompts, ...sharedItems].map((p) => ({
-    ...p,
-    upvotes: counts[`${base.agentId}_${p.id}`] ?? p.upvotes,
-  }));
 }
