@@ -28,9 +28,11 @@ export default function PromptCatchupPage() {
   const [showCertifiedOnly, setShowCertifiedOnly] = useState(false);
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   async function loadHomeData() {
     setLoadError("");
+    setIsLoading(true);
     try {
       const [myUpvotes, homeData] = await Promise.all([
       getMyUpvotes().catch(() => []),
@@ -49,12 +51,14 @@ export default function PromptCatchupPage() {
       setScoreboards(homeData.scoreboards ?? []);
       setSidebarLinks(homeData.sidebarLinks ?? []);
       setPromptTextsByAgent(homeData.promptTextsByAgent ?? {});
+      setIsLoading(false);
     } catch {
       setAgents([]);
       setGroups([]);
       setScoreboards([]);
       setSidebarLinks([]);
       setLoadError("Unable to load home data right now. Please check MongoDB connection and try again.");
+      setIsLoading(false);
     }
   }
 
@@ -326,6 +330,7 @@ export default function PromptCatchupPage() {
                   </button>
                 </div>
                 <div className="pcu-agent-grid">
+                  {isLoading ? <div className="pcu-empty">Loading agents/assistants...</div> : null}
                   {filteredAgents.map((a) => (
                     <div key={a.id} className="pcu-agent-card">
                       <div className="pcu-agent-header">
@@ -347,7 +352,9 @@ export default function PromptCatchupPage() {
                       </div>
                     </div>
                   ))}
-                  {filteredAgents.length === 0 && <div className="pcu-empty">No agents match your filters. Try adjusting your search or filters.</div>}
+                  {!isLoading && filteredAgents.length === 0 && (
+                    <div className="pcu-empty">No agents/assistants match your filters. Try adjusting your search or filters.</div>
+                  )}
                 </div>
               </>
             )}
