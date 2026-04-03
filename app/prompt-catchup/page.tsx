@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { filterAgents } from "@/lib/filter";
 import { Agent, Group, SortBy } from "@/lib/types";
-import { getMyUpvotes } from "@/lib/client-api";
+import { getMyUpvotes, getUpvoteCounts } from "@/lib/client-api";
 import { CURRENT_USER_ROLE, ViewMode } from "@/lib/view-meta";
 
 type ScoreboardRow = { ranking: string; name: string; value: string };
@@ -22,8 +22,9 @@ export default function PromptCatchupPage() {
   const [sidebarLinks, setSidebarLinks] = useState<Array<{ label: string; href?: string }>>([]);
   const [promptTextsByAgent, setPromptTextsByAgent] = useState<Record<number, string[]>>({});
   const [myUpvotes, setMyUpvotes] = useState<
-    Array<{ title?: string; description?: string; author?: string; upvotes?: number }>
+    Array<{ agentId?: number; promptId?: number; title?: string; description?: string; author?: string; upvotes?: number }>
   >([]);
+  const [upvoteCounts, setUpvoteCounts] = useState<Record<string, number>>({});
   const [promptSearch, setPromptSearch] = useState("");
   const [showCertifiedOnly, setShowCertifiedOnly] = useState(false);
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
@@ -34,16 +35,18 @@ export default function PromptCatchupPage() {
     setLoadError("");
     setIsLoading(true);
     try {
-      const [myUpvotes, homeData] = await Promise.all([
-      getMyUpvotes().catch(() => []),
-      fetch("/api/home").then(async (r) => {
-        if (!r.ok) {
-          const data = await r.json().catch(() => ({}));
-          throw new Error(data?.error || "Unable to load home data.");
-        }
-        return r.json();
-      }),
+      const [myUpvotes, counts, homeData] = await Promise.all([
+        getMyUpvotes().catch(() => []),
+        getUpvoteCounts().catch(() => ({})),
+        fetch("/api/home").then(async (r) => {
+          if (!r.ok) {
+            const data = await r.json().catch(() => ({}));
+            throw new Error(data?.error || "Unable to load home data.");
+          }
+          return r.json();
+        }),
       ]);
+      setUpvoteCounts(counts as Record<string, number>);
       setMyCount(myUpvotes.length);
       setMyUpvotes(myUpvotes);
       setAgents(homeData.agents ?? []);
@@ -57,6 +60,7 @@ export default function PromptCatchupPage() {
       setGroups([]);
       setScoreboards([]);
       setSidebarLinks([]);
+      setUpvoteCounts({});
       setLoadError("Unable to load home data right now. Please check MongoDB connection and try again.");
       setIsLoading(false);
     }
@@ -128,10 +132,12 @@ export default function PromptCatchupPage() {
     if (group !== "my-upvotes") return [];
     const q = promptSearch.toLowerCase().trim();
     let list = myUpvotes.map((row) => ({
+      agentId: row.agentId ?? 0,
+      promptId: row.promptId ?? 0,
       title: row.title ?? "Unknown",
       description: row.description ?? "",
       certified: false,
-      upvotes: row.upvotes ?? 0,
+      upvotes: upvoteCounts[`${row.agentId ?? 0}_${row.promptId ?? 0}`] ?? row.upvotes ?? 0,
       author: row.author ?? "",
     }));
     if (q) {
@@ -146,14 +152,14 @@ export default function PromptCatchupPage() {
       list = list.filter((r) => r.certified);
     }
     return list;
-  }, [group, promptSearch, myUpvotes, showCertifiedOnly]);
+  }, [group, promptSearch, myUpvotes, showCertifiedOnly, upvoteCounts]);
 
   function onRunPrompt(text: string) {
     if (!text) return;
     navigator.clipboard.writeText(text).then(() => {
       setShowCopiedMessage(true);
       setTimeout(() => setShowCopiedMessage(false), 2500);
-      window.open("https://www.vortexiq.ai/contact-us", "_blank", "noopener,noreferrer");
+      window.open("https://www.workspaces.genai.citi.net/chat", "_blank", "noopener,noreferrer");
     });
   }
 

@@ -920,6 +920,83 @@ body {
   font-weight: 600;
 }
 
+.pcu-chat-launcher {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 1200;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 2px;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  background: #111827;
+  color: #f3f4f6;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+}
+
+.pcu-chat-launcher-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: #5b6069;
+  color: #e5e7eb;
+}
+
+.pcu-chatbox-panel {
+  position: fixed;
+  left: 50%;
+  bottom: 1.35rem;
+  transform: translateX(-50%);
+  z-index: 1200;
+  width: min(620px, calc(100vw - 2rem));
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 4px;
+  background: #111827;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.pcu-chatbox-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-radius: 999px;
+  background: #6b7280;
+  color: #fff;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.95rem;
+}
+
+.pcu-chatbox-input::placeholder {
+  color: #e5e7eb;
+}
+
+.pcu-chatbox-input:focus {
+  outline: 2px solid #cbd5e1;
+  outline-offset: 1px;
+}
+
+.pcu-chatbox-send {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: #e5e7eb;
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 @media (max-width: 1024px) {
   .share-page {
     grid-template-columns: minmax(0, 1fr);

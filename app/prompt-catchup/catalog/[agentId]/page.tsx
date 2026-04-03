@@ -90,7 +90,7 @@ export default function PromptCatalogPage({ params }: { params: Promise<{ agentI
     navigator.clipboard.writeText(text).then(() => {
       setShowCopiedMessage(true);
       setTimeout(() => setShowCopiedMessage(false), 2500);
-      window.open("https://www.vortexiq.ai/contact-us", "_blank", "noopener,noreferrer");
+      window.open("https://www.workspaces.genai.citi.net/chat", "_blank", "noopener,noreferrer");
     });
   }
 
