@@ -457,3 +457,19 @@ addProd();
 
 </body>
 </html>
+
+
+<script src="assets/prompt-catchup-chat-widget.js"></script>
+<script>
+  window.addEventListener("load", function () {
+    if (window.PromptCatchupChat) {
+      window.PromptCatchupChat.init({
+        openUrl: "https://www.vortexiq.ai/contact-us",
+        launcherAriaLabel: "Open prompt chatbox",
+        inputPlaceholder: "ASK PROMPT CATCH UP",
+        copyToClipboard: true,
+        openInNewTab: true
+      });
+    }
+  });
+</script>
