@@ -92,3 +92,21 @@ export async function addComment(payload: Omit<StoredComment, "id" | "timeAgo" |
   });
   return (await res.json()) as StoredComment;
 }
+
+export async function trackActivity(payload: {
+  action: "learn_more" | "run_prompt";
+  agentId: number;
+  promptId?: number;
+}) {
+  const userId = getUserId();
+  const res = await fetch("/api/activity", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, ...payload }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Unable to track activity.");
+  }
+  return res.json();
+}

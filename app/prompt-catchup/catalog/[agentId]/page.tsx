@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { getMyUpvotes, upvotePrompt } from "@/lib/client-api";
+import { getMyUpvotes, trackActivity, upvotePrompt } from "@/lib/client-api";
 import { PromptCatalog, PromptCatalogItem } from "@/lib/types";
 
 async function loadCatalog(agentId: number): Promise<PromptCatalog> {
@@ -87,6 +87,7 @@ export default function PromptCatalogPage({ params }: { params: Promise<{ agentI
   function onRunPrompt(prompt: PromptCatalogItem) {
     const text = prompt.prompt || prompt.description || "";
     if (!text) return;
+    trackActivity({ action: "run_prompt", agentId, promptId: prompt.id }).catch(() => undefined);
     navigator.clipboard.writeText(text).then(() => {
       setShowCopiedMessage(true);
       setTimeout(() => setShowCopiedMessage(false), 2500);

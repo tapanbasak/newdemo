@@ -137,6 +137,13 @@ body {
   border-color: var(--pcu-blue);
 }
 
+.pcu-group-chip.disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+}
+
 .pcu-chip-count {
   background: #eceff1;
   color: #607d8b;
@@ -149,6 +156,11 @@ body {
 .pcu-group-chip.active .pcu-chip-count {
   background: rgba(255, 255, 255, 0.25);
   color: #fff;
+}
+
+.pcu-group-chip.disabled .pcu-chip-count {
+  background: #e2e8f0;
+  color: #94a3b8;
 }
 
 .pcu-sidebar-links {

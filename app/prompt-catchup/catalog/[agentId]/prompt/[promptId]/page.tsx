@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { addComment, fetchComments, getMyUpvotes, upvotePrompt } from "@/lib/client-api";
+import { addComment, fetchComments, getMyUpvotes, trackActivity, upvotePrompt } from "@/lib/client-api";
 import { PromptCatalog, PromptCatalogItem } from "@/lib/types";
 
 export default function PromptDetailPage({
@@ -160,6 +160,7 @@ export default function PromptDetailPage({
 
           <div className="detail-actions">
             <button type="button" className="action-btn" onClick={() => {
+              trackActivity({ action: "run_prompt", agentId, promptId }).catch(() => undefined);
               navigator.clipboard.writeText(prompt.prompt || prompt.description).then(() => {
                 setShowCopiedMessage(true);
                 setTimeout(() => setShowCopiedMessage(false), 2500);

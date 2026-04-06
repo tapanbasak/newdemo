@@ -14,7 +14,7 @@ export async function GET() {
   }
 
   const db = await getDb();
-  const [agentsRaw, groupsRaw, scoreboardsRaw, promptsRaw] = await Promise.all([
+  const [agentsRaw, groupsRaw, scoreboardsRaw, promptsRaw, activityAgg] = await Promise.all([
     db!.collection("agents").find({}).toArray(),
     db!.collection("groups").find({}).sort({ sortOrder: 1 }).toArray(),
     db!.collection("scoreboards").find({}).sort({ key: 1 }).toArray(),
@@ -22,7 +22,35 @@ export async function GET() {
       .collection("prompts")
       .find({}, { projection: { _id: 0, agentId: 1, prompt: 1, description: 1 } })
       .toArray(),
+    db!
+      .collection("activity_events")
+      .aggregate([
+        {
+          $group: {
+            _id: "$agentId",
+            usageCount: {
+              $sum: {
+                $switch: {
+                  branches: [
+                    { case: { $eq: ["$action", "learn_more"] }, then: 1 },
+                    { case: { $eq: ["$action", "run_prompt"] }, then: 3 },
+                  ],
+                  default: 0,
+                },
+              },
+            },
+          },
+        },
+      ])
+      .toArray(),
   ]);
+
+  const usageByAgent: Record<number, number> = {};
+  for (const row of activityAgg) {
+    const id = Number(row._id);
+    if (!Number.isFinite(id)) continue;
+    usageByAgent[id] = Number(row.usageCount ?? 0);
+  }
 
   const promptCountsByAgent: Record<number, number> = {};
   const promptTextsByAgent: Record<number, string[]> = {};
@@ -44,7 +72,7 @@ export async function GET() {
     updatedDate: a.updatedDate ? String(a.updatedDate) : undefined,
     category: String(a.category ?? ""),
     roleTags: Array.isArray(a.roleTags) ? a.roleTags : [],
-    usageCount: Number(a.usageCount ?? 0),
+    usageCount: usageByAgent[Number(a.agentId)] ?? 0,
   }));
 
   const groups = groupsRaw.map((g) => ({

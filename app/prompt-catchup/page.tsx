@@ -4,11 +4,28 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { filterAgents } from "@/lib/filter";
 import { Agent, Group, SortBy } from "@/lib/types";
-import { getMyUpvotes, getUpvoteCounts } from "@/lib/client-api";
+import { getMyUpvotes, getUpvoteCounts, trackActivity } from "@/lib/client-api";
 import { CURRENT_USER_ROLE, ViewMode } from "@/lib/view-meta";
 
 type ScoreboardRow = { ranking: string; name: string; value: string };
 type Scoreboard = { title: string; columns: string[]; rows: ScoreboardRow[]; footnote?: string };
+
+function normalizeGroups(input: Group[]): Group[] {
+  const mapped = input.map((g) =>
+    g.slug === "agents" ? { ...g, name: "Assistants" } : g
+  );
+  const hasAgentGroup = mapped.some((g) => g.slug === "agent");
+  if (!hasAgentGroup) {
+    const insertIndex = Math.max(
+      1,
+      mapped.findIndex((g) => g.slug !== "my-upvotes" && g.slug !== "agents")
+    );
+    const item: Group = { name: "Agent", slug: "agent", count: 0 };
+    if (insertIndex === -1) return [...mapped, item];
+    return [...mapped.slice(0, insertIndex), item, ...mapped.slice(insertIndex)];
+  }
+  return mapped;
+}
 
 export default function PromptCatchupPage() {
   const [search, setSearch] = useState("");
@@ -50,7 +67,7 @@ export default function PromptCatchupPage() {
       setMyCount(myUpvotes.length);
       setMyUpvotes(myUpvotes);
       setAgents(homeData.agents ?? []);
-      setGroups(homeData.groups ?? []);
+      setGroups(normalizeGroups(homeData.groups ?? []));
       setScoreboards(homeData.scoreboards ?? []);
       setSidebarLinks(homeData.sidebarLinks ?? []);
       setPromptTextsByAgent(homeData.promptTextsByAgent ?? {});
@@ -69,6 +86,12 @@ export default function PromptCatchupPage() {
   useEffect(() => {
     loadHomeData();
   }, []);
+
+  useEffect(() => {
+    if (viewMode === "most_used") {
+      loadHomeData();
+    }
+  }, [viewMode]);
 
   const filteredAgents = useMemo(() => {
     const byFilter = filterAgents(agents, "", "all", sort, group);
@@ -154,8 +177,11 @@ export default function PromptCatchupPage() {
     return list;
   }, [group, promptSearch, myUpvotes, showCertifiedOnly, upvoteCounts]);
 
-  function onRunPrompt(text: string) {
+  function onRunPrompt(text: string, agentId?: number, promptId?: number) {
     if (!text) return;
+    if (agentId) {
+      trackActivity({ action: "run_prompt", agentId, promptId }).catch(() => undefined);
+    }
     navigator.clipboard.writeText(text).then(() => {
       setShowCopiedMessage(true);
       setTimeout(() => setShowCopiedMessage(false), 2500);
@@ -215,16 +241,23 @@ export default function PromptCatchupPage() {
             <aside className="pcu-sidebar">
               <h3 className="pcu-sidebar-heading">Groups</h3>
               <div className="pcu-group-chips">
-                {groupsWithCounts.map((g) => (
+                {groupsWithCounts.map((g) => {
+                  const isDisabled = g.slug === "agent" && g.count === 0;
+                  return (
                   <button
                     key={g.slug}
-                    className={`pcu-group-chip ${group === g.slug ? "active" : ""}`}
-                    onClick={() => setGroup(group === g.slug ? null : g.slug)}
+                    className={`pcu-group-chip ${group === g.slug ? "active" : ""} ${isDisabled ? "disabled" : ""}`}
+                    onClick={() => {
+                      if (isDisabled) return;
+                      setGroup(group === g.slug ? null : g.slug);
+                    }}
+                    disabled={isDisabled}
                   >
                     {g.name}
                     <span className="pcu-chip-count">{g.count}</span>
                   </button>
-                ))}
+                );
+                })}
               </div>
               <div className="pcu-sidebar-links">
                 {sidebarLinks.map((link) => (
@@ -287,7 +320,11 @@ export default function PromptCatchupPage() {
                           {row.certified ? <div className="prompt-certified">Certified</div> : null}
                         </div>
                         <div className="col col-run">
-                          <button type="button" className="run-prompt-btn" onClick={() => onRunPrompt(row.description)}>
+                          <button
+                            type="button"
+                            className="run-prompt-btn"
+                            onClick={() => onRunPrompt(row.description, row.agentId, row.promptId)}
+                          >
                             Run Prompt
                             <span className="btn-icon run-icon" aria-hidden="true">
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -354,7 +391,15 @@ export default function PromptCatchupPage() {
                       <p className="pcu-agent-description">{a.description}</p>
                       <div className="pcu-agent-footer">
                         <span className="pcu-prompt-count">{a.promptCount} prompts</span>
-                        <Link className="pcu-learn-more" href={`/prompt-catchup/catalog/${a.id}`}>Learn More →</Link>
+                        <Link
+                          className="pcu-learn-more"
+                          href={`/prompt-catchup/catalog/${a.id}`}
+                          onClick={() =>
+                            trackActivity({ action: "learn_more", agentId: a.id }).catch(() => undefined)
+                          }
+                        >
+                          Learn More →
+                        </Link>
                       </div>
                     </div>
                   ))}
