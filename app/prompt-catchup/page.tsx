@@ -231,6 +231,13 @@ export default function PromptCatchupPage() {
                   </tbody>
                 </table>
                 {"footnote" in board && board.footnote ? <p className="pcu-scoreboard-footnote">{board.footnote}</p> : null}
+                {board.title === "Prompt Engineering Champions" ? (
+                  <div className="pcu-scoreboard-actions">
+                    <Link className="pcu-view-all-btn" href="/prompt-catchup/champions">
+                      View all
+                    </Link>
+                  </div>
+                ) : null}
               </div>
             </div>
           ))}

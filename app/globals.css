@@ -107,6 +107,25 @@ body {
   font-size: 0.75rem;
 }
 
+.pcu-scoreboard-actions {
+  margin-top: 0.8rem;
+}
+
+.pcu-view-all-btn {
+  display: inline-block;
+  border: 1px solid #f9a825;
+  color: #0a1929;
+  background: #fff;
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 4px;
+}
+
+.pcu-view-all-btn:hover {
+  background: #fff7e6;
+}
+
 .pcu-sidebar-heading {
   font-size: 0.8125rem;
   font-weight: 700;
@@ -1009,12 +1028,374 @@ body {
   justify-content: center;
 }
 
+.pcu-champions-page {
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, #10253f 0%, #061324 55%, #030a15 100%);
+  color: #e2e8f0;
+  padding: 1.25rem;
+}
+
+.pcu-champions-topbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.pcu-champions-metric {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(110, 231, 255, 0.25);
+  background: rgba(12, 29, 51, 0.75);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pcu-champions-metric .label {
+  font-size: 0.7rem;
+  color: #93c5fd;
+  letter-spacing: 0.04em;
+}
+
+.pcu-champions-metric .value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #67e8f9;
+}
+
+.pcu-champions-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1rem;
+}
+
+.pcu-champions-main {
+  border: 1px solid rgba(110, 231, 255, 0.2);
+  background: rgba(8, 24, 43, 0.78);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.pcu-champions-main h1 {
+  margin: 0 0 0.4rem;
+  font-size: 1.45rem;
+}
+
+.pcu-champions-subtitle {
+  margin: 0 0 1rem;
+  color: #93c5fd;
+  font-size: 0.82rem;
+}
+
+.pcu-champions-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.pcu-podium-wrap {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+  align-items: end;
+}
+
+.pcu-champion-card {
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: linear-gradient(180deg, rgba(15, 35, 61, 0.95), rgba(11, 24, 44, 0.95));
+  padding: 0.8rem;
+  position: relative;
+  overflow: visible;
+}
+
+/* Podium card height: tallest → medium → short (mock). */
+.pcu-rank-1 {
+  min-height: 336px;
+}
+
+.pcu-rank-2 {
+  min-height: 292px;
+}
+
+.pcu-rank-3 {
+  min-height: 248px;
+}
+
+.pcu-rank-badge {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.6rem;
+  font-size: 0.72rem;
+  color: #facc15;
+}
+
+.pcu-corner-icon {
+  position: absolute;
+  font-size: 1.1rem;
+}
+
+.pcu-corner-medal {
+  top: 0.45rem;
+  right: 0.55rem;
+}
+
+.pcu-corner-coin {
+  right: 0.55rem;
+  bottom: 0.5rem;
+}
+
+/* Podium avatars: #1 largest, #2 middle, #3 smallest (mock). */
+.pcu-champion-avatar-stack {
+  display: flex;
+  justify-content: center;
+  margin: 1rem auto 0.65rem;
+}
+
+.pcu-champion-avatar-ring {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.pcu-rank-1 .pcu-champion-avatar-ring {
+  width: 102px;
+  height: 102px;
+}
+
+.pcu-rank-2 .pcu-champion-avatar-ring {
+  width: 80px;
+  height: 80px;
+}
+
+.pcu-rank-3 .pcu-champion-avatar-ring {
+  width: 64px;
+  height: 64px;
+}
+
+/*
+ * Badge sits outside the silhouette overlap (mock): anchor past the circle rim (~85%),
+ * nudged toward the corner so more of the icon clears the ring.
+ */
+.pcu-champion-podium-badge {
+  position: absolute;
+  left: 94%;
+  top: 94%;
+  transform: translate(calc(-50% + 5px), calc(-50% + 5px));
+  width: 46%;
+  height: 46%;
+  max-width: 44px;
+  max-height: 44px;
+  min-width: 28px;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45));
+}
+
+.pcu-rank-1 .pcu-champion-podium-badge {
+  max-width: 52px;
+  max-height: 52px;
+}
+
+.pcu-rank-2 .pcu-champion-podium-badge {
+  max-width: 42px;
+  max-height: 42px;
+}
+
+.pcu-rank-3 .pcu-champion-podium-badge {
+  max-width: 36px;
+  max-height: 36px;
+}
+
+.pcu-profile-avatar {
+  flex-shrink: 0;
+}
+
+.pcu-champion-avatar-ring .pcu-profile-avatar--podium {
+  width: 100%;
+  height: 100%;
+}
+
+.pcu-profile-avatar--podium .pcu-profile-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.pcu-profile-avatar--leaderboard {
+  width: 36px;
+  height: 36px;
+}
+
+.pcu-profile-avatar--leaderboard .pcu-profile-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.pcu-podium-side-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  opacity: 0.98;
+}
+
+.pcu-podium-side-icon svg {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+}
+
+.pcu-medal {
+  display: inline-block;
+  font-size: 0.72rem;
+  color: #facc15;
+  margin-bottom: 0.4rem;
+}
+
+.pcu-champion-card h2 {
+  margin: 0 0 0.45rem;
+  font-size: 1.1rem;
+}
+
+.pcu-champion-name {
+  font-weight: 700;
+  font-style: italic;
+  color: #facc15;
+}
+
+.pcu-prompts {
+  margin: 0 0 0.6rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.pcu-prompts strong {
+  font-weight: 800;
+}
+
+.pcu-prompts--r1 {
+  color: #facc15;
+  font-size: 1.35rem;
+}
+
+.pcu-prompts--r2 {
+  color: #f8fafc;
+  font-size: 1.2rem;
+}
+
+.pcu-prompts--r3 {
+  color: #f1f5f9;
+  font-size: 1.02rem;
+  font-weight: 500;
+}
+
+.pcu-champion-card ul {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+}
+
+.pcu-champions-board {
+  border: 1px solid rgba(110, 231, 255, 0.2);
+  background: rgba(8, 24, 43, 0.78);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.pcu-champions-board h3 {
+  margin: 0 0 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.85rem;
+  color: #93c5fd;
+}
+
+.pcu-champions-board ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pcu-champions-board li {
+  display: grid;
+  grid-template-columns: 32px 40px minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  align-items: center;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 0.5rem 0;
+}
+
+.pcu-champions-board .rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #bfdbfe;
+  background: rgba(15, 23, 42, 0.5);
+  border: 2px solid #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15);
+}
+
+.pcu-champions-board .name {
+  color: #e2e8f0;
+  font-size: 0.88rem;
+}
+
+.pcu-champions-board .score {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: #facc15;
+  text-align: right;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.pcu-lb-coin {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.pcu-champions-footer {
+  margin-top: 1rem;
+}
+
+.pcu-champions-footer a {
+  color: #67e8f9;
+  text-decoration: none;
+}
+
+.pcu-champions-footer a:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 1024px) {
   .share-page {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .grid-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pcu-champions-topbar,
+  .pcu-champions-cards,
+  .pcu-champions-content {
     grid-template-columns: minmax(0, 1fr);
   }
 }
