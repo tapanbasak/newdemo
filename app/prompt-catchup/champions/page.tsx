@@ -16,7 +16,7 @@ const TOP_CARDS = [
     timeSaved: "41.0h",
     rank: 1,
     promptClass: "pcu-prompts--r1",
-    promptRest: "Total Prompts",
+    promptRest: "Prompt",
   },
   {
     name: "Malvinder Kainth",
@@ -26,7 +26,7 @@ const TOP_CARDS = [
     timeSaved: "28.5h",
     rank: 2,
     promptClass: "pcu-prompts--r2",
-    promptRest: "Prompts Shared",
+    promptRest: "Prompt",
   },
   {
     name: "Oswaldo Ortiz",
@@ -36,7 +36,7 @@ const TOP_CARDS = [
     timeSaved: "22.0h",
     rank: 3,
     promptClass: "pcu-prompts--r3",
-    promptRest: "Prompts Submitted",
+    promptRest: "Prompt",
   },
 ] as const;
 
@@ -103,10 +103,13 @@ export default function ChampionsDashboardPage() {
                     </div>
                   </div>
                 </div>
-                <h2 className="pcu-champion-name">{card.name}</h2>
-                <p className={`pcu-prompts ${card.promptClass}`}>
-                  <strong>{card.prompts}</strong> {card.promptRest}
-                </p>
+                <div className="pcu-champion-titleline">
+                  <h2 className="pcu-champion-name">{card.name}</h2>
+                  <p className={`pcu-prompts ${card.promptClass}`}>
+                    <strong>{card.prompts}</strong>
+                    <span className="pcu-prompts-label">{card.promptRest}</span>
+                  </p>
+                </div>
                 <ul>
                   <li>Certified Prompts: {card.certified}</li>
                   <li>Total Upvotes: {card.upvotes}</li>

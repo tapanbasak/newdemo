@@ -1255,6 +1255,12 @@ body {
   display: block;
 }
 
+.pcu-tools-emoji {
+  font-size: 1.7rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 3px rgba(15, 23, 42, 0.7));
+}
+
 .pcu-medal {
   display: inline-block;
   font-size: 0.72rem;
@@ -1267,35 +1273,61 @@ body {
   font-size: 1.1rem;
 }
 
+.pcu-champion-titleline {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.45rem;
+  margin: 0 0 0.55rem;
+}
+
 .pcu-champion-name {
+  margin: 0;
   font-weight: 700;
   font-style: italic;
   color: #facc15;
+  line-height: 1.05;
+  white-space: nowrap;
+  font-size: 2.05rem;
+  letter-spacing: 0.01em;
 }
 
 .pcu-prompts {
-  margin: 0 0 0.6rem;
+  margin: 0;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.22rem;
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .pcu-prompts strong {
   font-weight: 800;
+  font-size: 3rem;
+  line-height: 0.9;
+}
+
+.pcu-prompts-label {
+  display: inline-block;
+  margin-top: 0.28rem;
+  line-height: 1.05;
 }
 
 .pcu-prompts--r1 {
   color: #facc15;
-  font-size: 1.35rem;
+  font-size: 0.95rem;
 }
 
 .pcu-prompts--r2 {
   color: #f8fafc;
-  font-size: 1.2rem;
+  font-size: 0.86rem;
 }
 
 .pcu-prompts--r3 {
   color: #f1f5f9;
-  font-size: 1.02rem;
+  font-size: 0.8rem;
   font-weight: 500;
 }
 

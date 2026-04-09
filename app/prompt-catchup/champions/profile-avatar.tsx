@@ -40,32 +40,7 @@ export function PodiumSideIcon({ variant }: { variant: "tools" | "trophy" | "coi
   if (variant === "tools") {
     return (
       <span className="pcu-podium-side-icon pcu-podium-side-icon--tools" aria-hidden="true">
-        <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-          {/* Hammer: NW–SE */}
-          <g transform="translate(28 28) rotate(-42)">
-            <rect x="-2.5" y="-4" width="5" height="22" rx="1.2" fill="#575e6b" />
-            <rect x="-9" y="-14" width="18" height="11" rx="2" fill="#94a3b8" />
-            <rect x="-6.5" y="-16" width="13" height="4" rx="1" fill="#cbd5e1" />
-          </g>
-          {/* Open-end wrench: NE–SW */}
-          <g transform="translate(28 28) rotate(42)">
-            <rect x="-2" y="-2" width="4" height="20" rx="1" fill="#575e6b" />
-            <path
-              d="M-2 -2v-7h6l2 3.5-4 3.5H-2"
-              fill="#94a3b8"
-              stroke="#94a3b8"
-              strokeWidth="0.5"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M4 -9.5h3.5c1.2 0 2.2 1 2.2 2.2 0 1.2-1 2.2-2.2 2.2H4"
-              fill="none"
-              stroke="#cbd5e1"
-              strokeWidth="1.1"
-              strokeLinecap="round"
-            />
-          </g>
-        </svg>
+        <span className="pcu-tools-emoji">⚔️</span>
       </span>
     );
   }
