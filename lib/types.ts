@@ -46,6 +46,7 @@ export interface SharedPrompt {
   createdBy: string;
   createdBySoeid: string;
   audience: string;
+  platform: "stylus" | "copilot";
   prompt: string;
   description: string;
   attachments?: string;

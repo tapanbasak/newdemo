@@ -85,6 +85,7 @@ export default function SharePromptPage() {
         createdBy: String(form.get("createdBy") || ""),
         createdBySoeid: String(form.get("createdBySoeid") || ""),
         audience: audience.join(", "),
+        platform: String(form.get("platform") || "stylus") as "stylus" | "copilot",
         prompt: String(form.get("prompt") || ""),
         description: String(form.get("description") || ""),
         attachments,
@@ -209,6 +210,20 @@ export default function SharePromptPage() {
                   <label>Attachments</label>
                   <input type="file" multiple onChange={onAttachmentsSelected} />
                   {attachments ? <small>{attachments}</small> : null}
+                </div>
+              </div>
+
+              <div className="field platform-field">
+                <label>Platform</label>
+                <div className="platform-options" role="radiogroup" aria-label="Platform selection">
+                  <label className="platform-option">
+                    <input type="radio" name="platform" value="stylus" defaultChecked required />
+                    CITI Stylus
+                  </label>
+                  <label className="platform-option">
+                    <input type="radio" name="platform" value="copilot" required />
+                    Copilot
+                  </label>
                 </div>
               </div>
 

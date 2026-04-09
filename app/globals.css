@@ -915,6 +915,25 @@ body {
   padding: 0.5rem 0.75rem;
 }
 
+.platform-options {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.platform-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.platform-field {
+  margin-bottom: 0.6rem;
+}
+
 .submit-row {
   margin-top: 1.5rem;
 }

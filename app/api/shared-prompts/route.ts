@@ -16,8 +16,19 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const body = (await req.json()) as SharedPrompt;
-  if (!body.title || !body.createdBy || !body.createdBySoeid || !body.prompt) {
+  if (!body.title || !body.createdBy || !body.createdBySoeid || !body.prompt || !body.platform) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+  const incomingPlatform = String(body.platform).trim().toLowerCase();
+  const normalizedPlatform =
+    incomingPlatform === "stylus" || incomingPlatform === "citi stylus"
+      ? "stylus"
+      : incomingPlatform === "copilot"
+        ? "copilot"
+        : null;
+
+  if (!normalizedPlatform) {
+    return NextResponse.json({ error: "Invalid platform value" }, { status: 400 });
   }
   if (!hasMongo()) {
     return NextResponse.json({ error: "MongoDB is not configured" }, { status: 500 });
@@ -44,6 +55,7 @@ export async function POST(req: Request) {
   const uniqueAgentIds = Array.from(new Set(agentIds));
   await db!.collection("shared_prompts").insertOne({
     ...body,
+    platform: normalizedPlatform,
     targetAgentIds: uniqueAgentIds,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -70,6 +82,7 @@ export async function POST(req: Request) {
       tip: "",
       lastUpdated: "",
       source: "share",
+      platform: normalizedPlatform,
       createdBySoeid: body.createdBySoeid,
       audienceTokens,
       attachments: body.attachments || "",

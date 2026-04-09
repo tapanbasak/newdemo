@@ -175,6 +175,7 @@ async function seedCoreData(db: Db): Promise<void> {
             tip: prompt.tip ?? "",
             lastUpdated: prompt.lastUpdated ?? "",
             source: "seed",
+            platform: "stylus",
             updatedAt: new Date(),
           },
           $setOnInsert: { createdAt: new Date() },

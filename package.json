@@ -6,7 +6,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed:mongodb": "tsx scripts/seed-mongo.ts"
+    "seed:mongodb": "tsx scripts/seed-mongo.ts",
+    "migrate:platform": "tsx scripts/migrate-platform-field.ts"
   },
   "private": true,
   "dependencies": {
