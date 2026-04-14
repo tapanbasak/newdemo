@@ -32,7 +32,7 @@
   },
   {
     "agentId": 5,
-    "title": "Release Engineering Agent Prompt Catalog",
+    "title": "Release Engineering Assistant Prompt Catalog",
     "subtitle": "Automates release pipelines, version management, and deployment artifacts.",
     "totalPrompts": 42,
     "prompts": [
@@ -58,7 +58,7 @@
   },
   {
     "agentId": 3,
-    "title": "Production Agent Prompt Catalog",
+    "title": "Production Assistant Prompt Catalog",
     "subtitle": "Deployments, rollbacks, and incident response",
     "totalPrompts": 31,
     "prompts": [

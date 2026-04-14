@@ -28,6 +28,8 @@ export interface PromptCatalogItem {
   certified: boolean;
   upvotes: number;
   author: string;
+  /** From Mongo `prompts.platform`; drives Run Prompt redirect (stylus / copilot). */
+  platform?: string;
   timesSaved?: string;
   tip?: string;
   lastUpdated?: string;
@@ -46,7 +48,11 @@ export interface SharedPrompt {
   createdBy: string;
   createdBySoeid: string;
   audience: string;
-  platform: "stylus" | "copilot";
+  platform: string;
+  /** Canonical primary role (first selected role tag). */
+  role?: string;
+  /** Selected role tags (single today or multi-select). */
+  roleTags?: string[];
   prompt: string;
   description: string;
   attachments?: string;

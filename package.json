@@ -7,7 +7,10 @@
     "start": "next start",
     "lint": "next lint",
     "seed:mongodb": "tsx scripts/seed-mongo.ts",
-    "migrate:platform": "tsx scripts/migrate-platform-field.ts"
+    "migrate:platform": "tsx scripts/migrate-platform-field.ts",
+    "migrate:agent-names": "tsx scripts/rename-agent-to-assistant-mongo.ts",
+    "migrate:shared-authors": "tsx scripts/backfill-shared-prompt-authors.ts",
+    "migrate:missing-shared": "tsx scripts/backfill-missing-shared-prompts.ts"
   },
   "private": true,
   "dependencies": {

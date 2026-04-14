@@ -50,6 +50,7 @@ export async function GET(
       certified: Boolean(p.certified),
       upvotes: Number(p.upvotes ?? 0) + (upvoteCounts[pid] ?? 0),
       author: String(p.author ?? ""),
+      platform: p.platform != null && p.platform !== "" ? String(p.platform) : undefined,
       timesSaved: p.timesSaved ? String(p.timesSaved) : undefined,
       tip: p.tip ? String(p.tip) : undefined,
       lastUpdated: p.lastUpdated ? String(p.lastUpdated) : undefined,

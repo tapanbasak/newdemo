@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { getMyUpvotes, trackActivity, upvotePrompt } from "@/lib/client-api";
+import { getRunPromptTargetUrl } from "@/lib/run-prompt";
 import { PromptCatalog, PromptCatalogItem } from "@/lib/types";
 
 async function loadCatalog(agentId: number): Promise<PromptCatalog> {
@@ -16,15 +17,17 @@ async function loadCatalog(agentId: number): Promise<PromptCatalog> {
 export default function PromptCatalogPage({ params }: { params: Promise<{ agentId: string }> }) {
   const [agentId, setAgentId] = useState(0);
   const [catalog, setCatalog] = useState<PromptCatalog | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [showCertifiedOnly, setShowCertifiedOnly] = useState(false);
   const [mine, setMine] = useState<Record<string, boolean>>({});
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
   const [error, setError] = useState("");
 
-  async function loadPageData(targetAgentId: number) {
+  const loadPageData = useCallback(async (targetAgentId: number) => {
     if (!targetAgentId) return;
     setError("");
+    setIsLoading(true);
     try {
       const [catalogData, my] = await Promise.all([loadCatalog(targetAgentId), getMyUpvotes()]);
       setCatalog(catalogData);
@@ -34,8 +37,11 @@ export default function PromptCatalogPage({ params }: { params: Promise<{ agentI
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to load catalog.";
       setError(message);
+      setCatalog(null);
+    } finally {
+      setIsLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     params.then((p) => setAgentId(Number(p.agentId)));
@@ -43,8 +49,9 @@ export default function PromptCatalogPage({ params }: { params: Promise<{ agentI
 
   useEffect(() => {
     if (!agentId) return;
+    setCatalog(null);
     loadPageData(agentId);
-  }, [agentId]);
+  }, [agentId, loadPageData]);
 
   const filtered = useMemo(() => {
     if (!catalog) return [];
@@ -57,6 +64,9 @@ export default function PromptCatalogPage({ params }: { params: Promise<{ agentI
       )
     );
   }, [catalog, showCertifiedOnly, search]);
+
+  /** Route params not resolved yet, or catalog fetch in progress */
+  const showCatalogLoading = !agentId || isLoading;
 
   async function onUpvote(prompt: PromptCatalogItem) {
     setError("");
@@ -88,10 +98,14 @@ export default function PromptCatalogPage({ params }: { params: Promise<{ agentI
     const text = prompt.prompt || prompt.description || "";
     if (!text) return;
     trackActivity({ action: "run_prompt", agentId, promptId: prompt.id }).catch(() => undefined);
+    const targetUrl = getRunPromptTargetUrl(prompt.platform);
+
     navigator.clipboard.writeText(text).then(() => {
       setShowCopiedMessage(true);
       setTimeout(() => setShowCopiedMessage(false), 2500);
-      window.open("https://www.workspaces.genai.citi.net/chat", "_blank", "noopener,noreferrer");
+      if (targetUrl) {
+        window.open(targetUrl, "_blank", "noopener,noreferrer");
+      }
     });
   }
 
@@ -143,7 +157,7 @@ export default function PromptCatalogPage({ params }: { params: Promise<{ agentI
             <h1 className="catalog-title">{catalog?.title ?? "Prompt Catalog"}</h1>
             <p className="catalog-subtitle">{catalog?.subtitle ?? ""}</p>
             <div className="catalog-meta">
-              <span>{filtered.length} Prompts Found</span>
+              <span>{showCatalogLoading ? "…" : `${filtered.length} Prompts Found`}</span>
             </div>
           </header>
           <section className="catalog-controls">
@@ -153,7 +167,12 @@ export default function PromptCatalogPage({ params }: { params: Promise<{ agentI
             </label>
           </section>
           <section className="catalog-table">
-            {filtered.length === 0 ? (
+            {showCatalogLoading ? (
+              <div className="catalog-loading" role="status" aria-live="polite">
+                <div className="pcu-spinner" aria-hidden="true" />
+                <p>Loading prompts…</p>
+              </div>
+            ) : error ? null : filtered.length === 0 ? (
               <div className="catalog-empty">
                 No prompts yet. <Link href="/prompt-catchup/share">Be the first to share one.</Link>
               </div>

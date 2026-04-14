@@ -5,12 +5,41 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { Agent, Group } from "@/lib/types";
 import { sharePrompt } from "@/lib/client-api";
 
+const PLATFORM_OPTIONS = [
+  { value: "stylus", label: "CITI Stylus (Workspaces)" },
+  { value: "copilot", label: "Microsoft 365 Copilot" },
+  { value: "gh_copilot_vscode", label: "GitHub Copilot (VS Code)" },
+  { value: "gh_copilot_jetbrains", label: "GitHub Copilot (JetBrains)" },
+  { value: "devin_ai", label: "Devin AI" },
+  { value: "citi_squad", label: "Citi Squad" },
+  { value: "citi_assist", label: "Citi Assist" },
+  { value: "orion", label: "Orion" },
+  { value: "other", label: "Other (free text)" },
+] as const;
+
+/** Slugs align with dashboard / DB; labels match the role picker design. */
+const ROLE_OPTIONS = [
+  { value: "incident-manager", label: "Incident Manager" },
+  { value: "release-manager", label: "Release Manager" },
+  { value: "scrum-master", label: "Scrum Master" },
+  { value: "quality-engineer", label: "Quality Engineer" },
+  { value: "developer", label: "Developer / Software Engineer" },
+  { value: "business-analyst", label: "Business Analyst" },
+  { value: "data-analyst", label: "Data Analyst" },
+  { value: "product-owner", label: "Product Owner" },
+  { value: "other", label: "Other (free text)" },
+] as const;
+
 export default function SharePromptPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [audience, setAudience] = useState<string[]>([]);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [attachments, setAttachments] = useState("");
+  const [selectedPlatformOption, setSelectedPlatformOption] = useState<string>("stylus");
+  const [customPlatform, setCustomPlatform] = useState("");
+  const [selectedRoleOptions, setSelectedRoleOptions] = useState<string[]>(["developer"]);
+  const [customRole, setCustomRole] = useState("");
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const audienceGroups = useMemo(() => groups.filter((g) => g.slug !== "my-upvotes"), [groups]);
@@ -68,6 +97,16 @@ export default function SharePromptPage() {
     setAttachments(names);
   }
 
+  function isRoleSelected(value: string) {
+    return selectedRoleOptions.includes(value);
+  }
+
+  function toggleRole(value: string, checked: boolean) {
+    setSelectedRoleOptions((prev) =>
+      checked ? Array.from(new Set([...prev, value])) : prev.filter((v) => v !== value)
+    );
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSuccess(false);
@@ -79,13 +118,48 @@ export default function SharePromptPage() {
     }
     const formEl = event.currentTarget;
     const form = new FormData(formEl);
+    const rawPlatform = selectedPlatformOption || "stylus";
+    const selectedPlatform =
+      rawPlatform === "other" ? customPlatform.trim().toLowerCase().replace(/\s+/g, "_") : rawPlatform;
+    if (!selectedPlatform) {
+      setError("Please enter a platform name.");
+      return;
+    }
+    const normalizedRoleTags = selectedRoleOptions
+      .filter((value) => value !== "other")
+      .map((value) =>
+        String(value)
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-]/g, "")
+      )
+      .filter(Boolean);
+    const customRoleTag = isRoleSelected("other")
+      ? customRole
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-]/g, "")
+      : "";
+    const selectedRoleTags = Array.from(new Set([...normalizedRoleTags, ...(customRoleTag ? [customRoleTag] : [])]));
+    if (selectedRoleTags.length === 0) {
+      setError("Please select at least one role.");
+      return;
+    }
+    if (isRoleSelected("other") && !customRoleTag) {
+      setError("Please enter a value for Other role.");
+      return;
+    }
     try {
       await sharePrompt({
         title: String(form.get("title") || ""),
         createdBy: String(form.get("createdBy") || ""),
         createdBySoeid: String(form.get("createdBySoeid") || ""),
         audience: audience.join(", "),
-        platform: String(form.get("platform") || "stylus") as "stylus" | "copilot",
+        platform: selectedPlatform,
+        role: selectedRoleTags[0],
+        roleTags: selectedRoleTags,
         prompt: String(form.get("prompt") || ""),
         description: String(form.get("description") || ""),
         attachments,
@@ -94,6 +168,10 @@ export default function SharePromptPage() {
       setAudience([]);
       setExpandedGroups(new Set());
       setAttachments("");
+      setSelectedPlatformOption("stylus");
+      setCustomPlatform("");
+      setSelectedRoleOptions(["developer"]);
+      setCustomRole("");
       setSuccess(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to submit prompt.";
@@ -213,17 +291,71 @@ export default function SharePromptPage() {
                 </div>
               </div>
 
-              <div className="field platform-field">
-                <label>Platform</label>
-                <div className="platform-options" role="radiogroup" aria-label="Platform selection">
-                  <label className="platform-option">
-                    <input type="radio" name="platform" value="stylus" defaultChecked required />
-                    CITI Stylus
-                  </label>
-                  <label className="platform-option">
-                    <input type="radio" name="platform" value="copilot" required />
-                    Copilot
-                  </label>
+              <div className="share-choice-group" aria-label="Platform and role">
+                <div className="share-choice-section share-choice-section--platform">
+                  <div className="share-choice-section__head">
+                    <span className="share-choice-section__title">Platform</span>
+                    <span className="share-choice-section__hint">Where this prompt will run</span>
+                  </div>
+                  <div className="field platform-field">
+                    <div className="platform-options" role="radiogroup" aria-label="Platform selection">
+                      {PLATFORM_OPTIONS.map((platform) => (
+                        <label className="platform-option" key={platform.value}>
+                          <input
+                            type="radio"
+                            name="platform"
+                            value={platform.value}
+                            checked={selectedPlatformOption === platform.value}
+                            onChange={() => setSelectedPlatformOption(platform.value)}
+                            required
+                          />
+                          {platform.label}
+                        </label>
+                      ))}
+                    </div>
+                    {selectedPlatformOption === "other" ? (
+                      <input
+                        type="text"
+                        name="customPlatform"
+                        placeholder="Enter custom platform name"
+                        value={customPlatform}
+                        onChange={(e) => setCustomPlatform(e.target.value)}
+                        required
+                      />
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="share-choice-section share-choice-section--role">
+                  <div className="share-choice-section__head">
+                    <span className="share-choice-section__title">Role</span>
+                    <span className="share-choice-section__hint">Who this prompt is most useful for</span>
+                  </div>
+                  <div className="field platform-field">
+                    <div className="platform-options" role="group" aria-label="Role selection">
+                      {ROLE_OPTIONS.map((role) => (
+                        <label className="platform-option" key={role.value}>
+                          <input
+                            type="checkbox"
+                            name={`role-${role.value}`}
+                            value={role.value}
+                            checked={isRoleSelected(role.value)}
+                            onChange={(e) => toggleRole(role.value, e.target.checked)}
+                          />
+                          {role.label}
+                        </label>
+                      ))}
+                    </div>
+                    {isRoleSelected("other") ? (
+                      <input
+                        type="text"
+                        name="customRole"
+                        placeholder="Enter custom role"
+                        value={customRole}
+                        onChange={(e) => setCustomRole(e.target.value)}
+                      />
+                    ) : null}
+                  </div>
                 </div>
               </div>
 

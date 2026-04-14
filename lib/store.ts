@@ -14,7 +14,7 @@ type SharedPromptDoc = {
   createdBy: string;
   createdBySoeid: string;
   audience: string;
-  platform: "stylus" | "copilot";
+  platform: string;
   prompt: string;
   description: string;
   attachments?: string;

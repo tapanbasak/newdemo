@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { filterAgents } from "@/lib/filter";
 import { Agent, Group, SortBy } from "@/lib/types";
 import { getMyUpvotes, getUpvoteCounts, trackActivity } from "@/lib/client-api";
+import { getRunPromptTargetUrl } from "@/lib/run-prompt";
+import { agentMatchesForMyRole, type PromptRoleHint } from "@/lib/for-my-role";
 import { CURRENT_USER_ROLE, ViewMode } from "@/lib/view-meta";
 
 type ScoreboardRow = { ranking: string; name: string; value: string };
@@ -38,8 +40,9 @@ export default function PromptCatchupPage() {
   const [scoreboards, setScoreboards] = useState<Scoreboard[]>([]);
   const [sidebarLinks, setSidebarLinks] = useState<Array<{ label: string; href?: string }>>([]);
   const [promptTextsByAgent, setPromptTextsByAgent] = useState<Record<number, string[]>>({});
+  const [promptRolesByAgent, setPromptRolesByAgent] = useState<Record<number, PromptRoleHint[]>>({});
   const [myUpvotes, setMyUpvotes] = useState<
-    Array<{ agentId?: number; promptId?: number; title?: string; description?: string; author?: string; upvotes?: number }>
+    Array<{ agentId?: number; promptId?: number; title?: string; description?: string; author?: string; upvotes?: number; platform?: string }>
   >([]);
   const [upvoteCounts, setUpvoteCounts] = useState<Record<string, number>>({});
   const [promptSearch, setPromptSearch] = useState("");
@@ -47,6 +50,17 @@ export default function PromptCatchupPage() {
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUserRole, setCurrentUserRole] = useState<string>(CURRENT_USER_ROLE);
+
+  useEffect(() => {
+    const fromStorage = localStorage.getItem("pcu_user_role");
+    const normalized = String(fromStorage ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+    setCurrentUserRole(normalized || CURRENT_USER_ROLE);
+  }, []);
 
   async function loadHomeData() {
     setLoadError("");
@@ -71,6 +85,7 @@ export default function PromptCatchupPage() {
       setScoreboards(homeData.scoreboards ?? []);
       setSidebarLinks(homeData.sidebarLinks ?? []);
       setPromptTextsByAgent(homeData.promptTextsByAgent ?? {});
+      setPromptRolesByAgent(homeData.promptRolesByAgent ?? {});
       setIsLoading(false);
     } catch {
       setAgents([]);
@@ -78,6 +93,8 @@ export default function PromptCatchupPage() {
       setScoreboards([]);
       setSidebarLinks([]);
       setUpvoteCounts({});
+      setPromptTextsByAgent({});
+      setPromptRolesByAgent({});
       setLoadError("Unable to load home data right now. Please check MongoDB connection and try again.");
       setIsLoading(false);
     }
@@ -118,8 +135,7 @@ export default function PromptCatchupPage() {
     const matched: typeof searched = [];
     const unmatched: typeof searched = [];
     for (const agent of searched) {
-      const tags = agent.roleTags ?? [];
-      if (tags.includes(CURRENT_USER_ROLE)) matched.push(agent);
+      if (agentMatchesForMyRole(agent, promptRolesByAgent, currentUserRole)) matched.push(agent);
       else unmatched.push(agent);
     }
     matched.sort((a, b) => {
@@ -133,7 +149,7 @@ export default function PromptCatchupPage() {
       return uB - uA || b.promptCount - a.promptCount;
     });
     return [...matched, ...unmatched];
-  }, [agents, search, sort, group, promptTextsByAgent, viewMode]);
+  }, [agents, search, sort, group, promptTextsByAgent, promptRolesByAgent, viewMode, currentUserRole]);
 
   const groupsWithCounts = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -159,6 +175,7 @@ export default function PromptCatchupPage() {
       promptId: row.promptId ?? 0,
       title: row.title ?? "Unknown",
       description: row.description ?? "",
+      platform: row.platform,
       certified: false,
       upvotes: upvoteCounts[`${row.agentId ?? 0}_${row.promptId ?? 0}`] ?? row.upvotes ?? 0,
       author: row.author ?? "",
@@ -177,15 +194,18 @@ export default function PromptCatchupPage() {
     return list;
   }, [group, promptSearch, myUpvotes, showCertifiedOnly, upvoteCounts]);
 
-  function onRunPrompt(text: string, agentId?: number, promptId?: number) {
+  function onRunPrompt(text: string, agentId?: number, promptId?: number, platform?: string) {
     if (!text) return;
     if (agentId) {
       trackActivity({ action: "run_prompt", agentId, promptId }).catch(() => undefined);
     }
+    const targetUrl = getRunPromptTargetUrl(platform);
     navigator.clipboard.writeText(text).then(() => {
       setShowCopiedMessage(true);
       setTimeout(() => setShowCopiedMessage(false), 2500);
-      window.open("https://www.workspaces.genai.citi.net/chat", "_blank", "noopener,noreferrer");
+      if (targetUrl) {
+        window.open(targetUrl, "_blank", "noopener,noreferrer");
+      }
     });
   }
 
@@ -330,7 +350,7 @@ export default function PromptCatchupPage() {
                           <button
                             type="button"
                             className="run-prompt-btn"
-                            onClick={() => onRunPrompt(row.description, row.agentId, row.promptId)}
+                            onClick={() => onRunPrompt(row.description, row.agentId, row.promptId, row.platform)}
                           >
                             Run Prompt
                             <span className="btn-icon run-icon" aria-hidden="true">
@@ -368,7 +388,7 @@ export default function PromptCatchupPage() {
                   <select className="form-select" value={viewMode} onChange={(e) => setViewMode(e.target.value as ViewMode)}>
                     <option value="for_my_role">For my role</option>
                     <option value="most_used">Most used</option>
-                    <option value="all_agents">All agents</option>
+                    <option value="all_agents">All Assistants</option>
                   </select>
                   <select className="form-select" value={sort} onChange={(e) => setSort(e.target.value as SortBy)}>
                     <option value="most_prompts">Most Prompts</option>
@@ -390,9 +410,9 @@ export default function PromptCatchupPage() {
                             <text x="50" y="58" textAnchor="middle" fill="#fff" fontSize="28" fontWeight="600">{a.name.charAt(0)}</text>
                           </svg>
                         </div>
-                        {a.status !== "ADOPT" ? (
+                        {/* {a.status !== "ADOPT" ? (
                           <span className="pcu-status-badge badge-evaluation">UNDER EVALUATION</span>
-                        ) : null}
+                        ) : null} */}
                       </div>
                       <h4 className="pcu-agent-name">{a.name}</h4>
                       <p className="pcu-agent-description">{a.description}</p>

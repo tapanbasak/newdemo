@@ -66,7 +66,7 @@ export const AGENTS: Agent[] = [
   },
   {
     id: 3,
-    name: "Production Agent",
+    name: "Production Assistant",
     description:
       "Manages production deployments, rollbacks, and incident response automation workflows.",
     status: "UNDER_EVALUATION",
@@ -76,7 +76,7 @@ export const AGENTS: Agent[] = [
   },
   {
     id: 4,
-    name: "LSE Agent",
+    name: "LSE Assistant",
     description:
       "Large-scale engineering agent that handles distributed system design and architecture reviews.",
     status: "ADOPT",
@@ -86,7 +86,7 @@ export const AGENTS: Agent[] = [
   },
   {
     id: 5,
-    name: "Release Engineering Agent",
+    name: "Release Engineering Assistant",
     description:
       "Automates release pipelines, version management, and deployment artifact generation.",
     status: "ADOPT",
@@ -96,7 +96,7 @@ export const AGENTS: Agent[] = [
   },
   {
     id: 7,
-    name: "Testing Agent",
+    name: "Testing Assistant",
     description:
       "Generates test cases, manages test suites, and provides coverage analysis reports.",
     status: "ADOPT",
@@ -106,7 +106,7 @@ export const AGENTS: Agent[] = [
   },
   {
     id: 8,
-    name: "Performance Agent",
+    name: "Performance Assistant",
     description:
       "Analyzes application performance metrics, identifies bottlenecks, and suggests optimizations.",
     status: "UNDER_EVALUATION",
@@ -116,7 +116,7 @@ export const AGENTS: Agent[] = [
   },
   {
     id: 9,
-    name: "Cloud One Agent",
+    name: "Cloud One Assistant",
     description:
       "Manages cloud infrastructure provisioning, scaling policies, and cost optimization across providers.",
     status: "ADOPT",
@@ -126,7 +126,7 @@ export const AGENTS: Agent[] = [
   },
   {
     id: 10,
-    name: "Ancestria Agent",
+    name: "Ancestria Assistant",
     description:
       "Traces dependency trees, maps service lineage, and provides impact analysis for changes.",
     status: "UNDER_EVALUATION",

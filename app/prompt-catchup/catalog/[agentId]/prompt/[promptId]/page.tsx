@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { addComment, fetchComments, getMyUpvotes, trackActivity, upvotePrompt } from "@/lib/client-api";
+import { getRunPromptTargetUrl } from "@/lib/run-prompt";
 import { PromptCatalog, PromptCatalogItem } from "@/lib/types";
 
 export default function PromptDetailPage({
@@ -19,10 +20,13 @@ export default function PromptDetailPage({
   const [catalog, setCatalog] = useState<PromptCatalog | null>(null);
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   async function loadPageData(targetAgentId: number, targetPromptId: number) {
     if (!targetAgentId || !targetPromptId) return;
     setError("");
+    setIsLoading(true);
+    setPrompt(null);
     try {
       const [p, cat, c, my] = await Promise.all([
         loadPrompt(targetAgentId, targetPromptId),
@@ -37,6 +41,10 @@ export default function PromptDetailPage({
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to load prompt details.";
       setError(message);
+      setPrompt(null);
+      setCatalog(null);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -80,9 +88,22 @@ export default function PromptDetailPage({
     setCommentText("");
   }
 
+  const showDetailLoading = !agentId || !promptId || isLoading;
+
+  if (showDetailLoading) {
+    return (
+      <div className="detail-page-wrapper pcu-page-body">
+        <div className="catalog-loading detail-prompt-loading" role="status" aria-live="polite">
+          <div className="pcu-spinner" aria-hidden="true" />
+          <p>Loading prompt…</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!prompt) {
     return (
-      <div className="pcu-container">
+      <div className="detail-page-wrapper pcu-page-body">
         {error ? (
           <div className="error-banner">
             {error}{" "}
@@ -90,7 +111,14 @@ export default function PromptDetailPage({
               Retry
             </button>
           </div>
-        ) : "Loading..."}
+        ) : (
+          <div className="catalog-empty">
+            <p>We couldn’t find that prompt.</p>
+            <p>
+              <Link href={agentId ? `/prompt-catchup/catalog/${agentId}` : "/prompt-catchup"}>Back to catalog</Link>
+            </p>
+          </div>
+        )}
       </div>
     );
   }
@@ -161,10 +189,13 @@ export default function PromptDetailPage({
           <div className="detail-actions">
             <button type="button" className="action-btn" onClick={() => {
               trackActivity({ action: "run_prompt", agentId, promptId }).catch(() => undefined);
+              const targetUrl = getRunPromptTargetUrl(prompt.platform);
               navigator.clipboard.writeText(prompt.prompt || prompt.description).then(() => {
                 setShowCopiedMessage(true);
                 setTimeout(() => setShowCopiedMessage(false), 2500);
-                window.open("https://www.workspaces.genai.citi.net/chat", "_blank", "noopener,noreferrer");
+                if (targetUrl) {
+                  window.open(targetUrl, "_blank", "noopener,noreferrer");
+                }
               });
             }}>
               <span className="btn-icon" aria-hidden="true">
