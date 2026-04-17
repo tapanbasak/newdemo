@@ -11,6 +11,15 @@ import { CURRENT_USER_ROLE, ViewMode } from "@/lib/view-meta";
 
 type ScoreboardRow = { ranking: string; name: string; value: string };
 type Scoreboard = { title: string; columns: string[]; rows: ScoreboardRow[]; footnote?: string };
+type MyUpvoteRow = {
+  agentId?: number;
+  promptId?: number;
+  title?: string;
+  description?: string;
+  author?: string;
+  upvotes?: number;
+  platform?: string;
+};
 
 function normalizeGroups(input: Group[]): Group[] {
   const mapped = input.map((g) =>
@@ -29,6 +38,18 @@ function normalizeGroups(input: Group[]): Group[] {
   return mapped;
 }
 
+function getMyUpvoteDedupKey(row: MyUpvoteRow) {
+  return `${String(row.title ?? "")
+    .trim()
+    .toLowerCase()}|${String(row.description ?? "")
+    .trim()
+    .toLowerCase()}|${String(row.author ?? "")
+    .trim()
+    .toLowerCase()}|${String(row.platform ?? "")
+    .trim()
+    .toLowerCase()}`;
+}
+
 export default function PromptCatchupPage() {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("for_my_role");
@@ -41,9 +62,7 @@ export default function PromptCatchupPage() {
   const [sidebarLinks, setSidebarLinks] = useState<Array<{ label: string; href?: string }>>([]);
   const [promptTextsByAgent, setPromptTextsByAgent] = useState<Record<number, string[]>>({});
   const [promptRolesByAgent, setPromptRolesByAgent] = useState<Record<number, PromptRoleHint[]>>({});
-  const [myUpvotes, setMyUpvotes] = useState<
-    Array<{ agentId?: number; promptId?: number; title?: string; description?: string; author?: string; upvotes?: number; platform?: string }>
-  >([]);
+  const [myUpvotes, setMyUpvotes] = useState<MyUpvoteRow[]>([]);
   const [upvoteCounts, setUpvoteCounts] = useState<Record<string, number>>({});
   const [promptSearch, setPromptSearch] = useState("");
   const [showCertifiedOnly, setShowCertifiedOnly] = useState(false);
@@ -78,7 +97,7 @@ export default function PromptCatchupPage() {
         }),
       ]);
       setUpvoteCounts(counts as Record<string, number>);
-      setMyCount(myUpvotes.length);
+      setMyCount(Array.from(new Set(myUpvotes.map((row) => getMyUpvoteDedupKey(row)))).length);
       setMyUpvotes(myUpvotes);
       setAgents(homeData.agents ?? []);
       setGroups(normalizeGroups(homeData.groups ?? []));
@@ -170,16 +189,41 @@ export default function PromptCatchupPage() {
   const filteredMyUpvotes = useMemo(() => {
     if (group !== "my-upvotes") return [];
     const q = promptSearch.toLowerCase().trim();
-    let list = myUpvotes.map((row) => ({
-      agentId: row.agentId ?? 0,
-      promptId: row.promptId ?? 0,
-      title: row.title ?? "Unknown",
-      description: row.description ?? "",
-      platform: row.platform,
-      certified: false,
-      upvotes: upvoteCounts[`${row.agentId ?? 0}_${row.promptId ?? 0}`] ?? row.upvotes ?? 0,
-      author: row.author ?? "",
-    }));
+    const deduped = new Map<
+      string,
+      {
+        agentId: number;
+        promptId: number;
+        title: string;
+        description: string;
+        platform?: string;
+        certified: boolean;
+        upvotes: number;
+        author: string;
+      }
+    >();
+
+    for (const row of myUpvotes) {
+      const item = {
+        agentId: row.agentId ?? 0,
+        promptId: row.promptId ?? 0,
+        title: row.title ?? "Unknown",
+        description: row.description ?? "",
+        platform: row.platform,
+        certified: false,
+        upvotes: upvoteCounts[`${row.agentId ?? 0}_${row.promptId ?? 0}`] ?? row.upvotes ?? 0,
+        author: row.author ?? "",
+      };
+      const key = getMyUpvoteDedupKey(item);
+      const existing = deduped.get(key);
+      if (!existing) {
+        deduped.set(key, item);
+      } else {
+        existing.upvotes += item.upvotes;
+      }
+    }
+
+    let list = Array.from(deduped.values());
     if (q) {
       list = list.filter(
         (r) =>
@@ -341,7 +385,10 @@ export default function PromptCatchupPage() {
                   </div>
                   {filteredMyUpvotes.length ? (
                     filteredMyUpvotes.map((row) => (
-                      <div className="table-row pcu-myupvote-row" key={`${row.title}-${row.author}`}>
+                      <div
+                        className="table-row pcu-myupvote-row"
+                        key={`${row.agentId ?? "na"}_${row.promptId ?? "na"}_${row.title}`}
+                      >
                         <div className="col col-title">
                           <div className="pcu-myupvote-title">{row.title}</div>
                           {row.certified ? <div className="prompt-certified">Certified</div> : null}
@@ -388,7 +435,6 @@ export default function PromptCatchupPage() {
                   <select className="form-select" value={viewMode} onChange={(e) => setViewMode(e.target.value as ViewMode)}>
                     <option value="for_my_role">For my role</option>
                     <option value="most_used">Most used</option>
-                    <option value="all_agents">All Assistants</option>
                   </select>
                   <select className="form-select" value={sort} onChange={(e) => setSort(e.target.value as SortBy)}>
                     <option value="most_prompts">Most Prompts</option>

@@ -42,7 +42,10 @@ export default function SharePromptPage() {
   const [customRole, setCustomRole] = useState("");
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
-  const audienceGroups = useMemo(() => groups.filter((g) => g.slug !== "my-upvotes"), [groups]);
+  const audienceGroups = useMemo(
+    () => groups.filter((g) => g.slug !== "my-upvotes" && g.slug !== "roles" && g.slug !== "role"),
+    [groups]
+  );
 
   async function loadShareData() {
     setError("");
@@ -111,11 +114,6 @@ export default function SharePromptPage() {
     event.preventDefault();
     setSuccess(false);
     setError("");
-    const selectedAgentCount = audience.filter((token) => token.startsWith("agent:")).length;
-    if (!selectedAgentCount) {
-      setError("Please select at least one Agent/Assistant in audience.");
-      return;
-    }
     const formEl = event.currentTarget;
     const form = new FormData(formEl);
     const rawPlatform = selectedPlatformOption || "stylus";
@@ -151,6 +149,16 @@ export default function SharePromptPage() {
       setError("Please enter a value for Other role.");
       return;
     }
+    const estimatedTimeSaveRaw = String(form.get("estimatedTimeSaveMinutes") ?? "").trim();
+    if (!/^\d+$/.test(estimatedTimeSaveRaw)) {
+      setError("Estimated Time Save must be a whole number in minutes.");
+      return;
+    }
+    const estimatedTimeSaveMinutes = Number(estimatedTimeSaveRaw);
+    if (!Number.isFinite(estimatedTimeSaveMinutes) || estimatedTimeSaveMinutes < 0) {
+      setError("Estimated Time Save must be 0 or more minutes.");
+      return;
+    }
     try {
       await sharePrompt({
         title: String(form.get("title") || ""),
@@ -160,6 +168,7 @@ export default function SharePromptPage() {
         platform: selectedPlatform,
         role: selectedRoleTags[0],
         roleTags: selectedRoleTags,
+        estimatedTimeSaveMinutes,
         prompt: String(form.get("prompt") || ""),
         description: String(form.get("description") || ""),
         attachments,
@@ -233,7 +242,7 @@ export default function SharePromptPage() {
 
               <div className="grid-row">
                 <div className="field wide">
-                  <label>Who could make use of this Prompt? (e.g., roles, agents, assistants)</label>
+                  <label>Who could make use of this Prompt? (e.g., assistants, apps, business org., functions)</label>
                   <div className="audience-section">
                     <div className="audience-tags">
                       {audienceGroups.map((g) => (
@@ -357,6 +366,18 @@ export default function SharePromptPage() {
                     ) : null}
                   </div>
                 </div>
+              </div>
+
+              <div className="field estimated-time-save-field">
+                <label>Estimated Time Save (minutes per run)</label>
+                <input
+                  required
+                  type="number"
+                  min={0}
+                  step={1}
+                  name="estimatedTimeSaveMinutes"
+                  placeholder="Enter minutes (e.g., 10)"
+                />
               </div>
 
               <div className="field">

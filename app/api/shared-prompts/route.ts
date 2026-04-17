@@ -16,6 +16,18 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const normalizeRoleTag = (input: unknown) =>
+    String(input ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+  const normalizeAgentName = (input: unknown) =>
+    String(input ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+
   const body = (await req.json()) as SharedPrompt;
   if (!body.title || !body.createdBy || !body.createdBySoeid || !body.prompt || !body.platform) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -31,23 +43,20 @@ export async function POST(req: Request) {
   const canonicalRoleTags = Array.from(
     new Set(
       [
-        ...bodyRoleTags.map((value) =>
-          String(value)
-            .trim()
-            .toLowerCase()
-            .replace(/\s+/g, "-")
-            .replace(/[^a-z0-9-]/g, "")
-        ),
-        String(body.role ?? "")
-          .trim()
-          .toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^a-z0-9-]/g, ""),
+        ...bodyRoleTags.map((value) => normalizeRoleTag(value)),
+        normalizeRoleTag(body.role ?? ""),
       ].filter(Boolean)
     )
   );
   const canonicalRole = canonicalRoleTags[0] ?? "";
   if (!canonicalRoleTags.length) return NextResponse.json({ error: "Invalid role value" }, { status: 400 });
+  const estimatedTimeSaveMinutes = Number(body.estimatedTimeSaveMinutes);
+  if (!Number.isInteger(estimatedTimeSaveMinutes) || estimatedTimeSaveMinutes < 0) {
+    return NextResponse.json(
+      { error: "Estimated Time Save must be a whole number of minutes (0 or more)." },
+      { status: 400 }
+    );
+  }
   if (!hasMongo()) {
     return NextResponse.json({ error: "MongoDB is not configured" }, { status: 500 });
   }
@@ -63,14 +72,56 @@ export async function POST(req: Request) {
     })
     .filter((v): v is number => Number.isFinite(v as number));
 
-  if (agentIds.length === 0) {
+  const roleAgents = await db!
+    .collection("agents")
+    .find(
+      {
+        category: { $in: ["roles", "role"] },
+      },
+      { projection: { _id: 0, agentId: 1, name: 1, roleTags: 1 } }
+    )
+    .toArray();
+  const roleAgentIds = roleAgents
+    .filter((agent) => {
+      const rowTags = Array.isArray(agent.roleTags) ? agent.roleTags.map((value) => normalizeRoleTag(value)) : [];
+      const nameTag = normalizeRoleTag(agent.name ?? "");
+      return canonicalRoleTags.some((tag) => rowTags.includes(tag) || tag === nameTag);
+    })
+    .map((agent) => Number(agent.agentId))
+    .filter((id) => Number.isFinite(id));
+
+  const appAgents = await db!
+    .collection("agents")
+    .find(
+      {
+        category: { $in: ["apps", "app"] },
+      },
+      { projection: { _id: 0, agentId: 1, name: 1 } }
+    )
+    .toArray();
+  const platformAppNameAliases: Record<string, string[]> = {
+    stylus: ["stylusworkspaces", "citistylusworkspaces"],
+    copilot: ["copilot", "microsoft365copilot"],
+    gh_copilot_vscode: ["githubcopilot"],
+    gh_copilot_jetbrains: ["githubcopilot"],
+    devin_ai: ["devinai"],
+  };
+  const targetAppNames = new Set(platformAppNameAliases[canonicalPlatform] ?? []);
+  const platformAgentIds =
+    targetAppNames.size === 0
+      ? []
+      : appAgents
+          .filter((agent) => targetAppNames.has(normalizeAgentName(agent.name)))
+          .map((agent) => Number(agent.agentId))
+          .filter((id) => Number.isFinite(id));
+
+  const uniqueAgentIds = Array.from(new Set([...agentIds, ...roleAgentIds, ...platformAgentIds]));
+  if (uniqueAgentIds.length === 0) {
     return NextResponse.json(
-      { error: "Select at least one target agent in audience." },
+      { error: "Select at least one target assistant in audience or choose a mapped role/platform." },
       { status: 400 }
     );
   }
-
-  const uniqueAgentIds = Array.from(new Set(agentIds));
   /** Primary role for filtering; `roleTags` can store multiple selections. */
   const roleTags = canonicalRoleTags;
 
@@ -86,6 +137,7 @@ export async function POST(req: Request) {
     platform: canonicalPlatform,
     role: canonicalRole,
     roleTags,
+    estimatedTimeSaveMinutes,
     targetAgentIds: uniqueAgentIds,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -122,6 +174,7 @@ export async function POST(req: Request) {
         platform: canonicalPlatform,
         role: canonicalRole,
         roleTags,
+        estimatedTimeSaveMinutes,
         createdBySoeid: body.createdBySoeid,
         audienceTokens,
         attachments: body.attachments || "",

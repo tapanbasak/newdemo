@@ -68,6 +68,7 @@ body {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.78rem;
+  table-layout: fixed;
 }
 
 .pcu-scoreboard-table thead tr {
@@ -78,6 +79,26 @@ body {
 .pcu-scoreboard-table th,
 .pcu-scoreboard-table td {
   padding: 0.45rem 0.65rem;
+}
+
+.pcu-scoreboard-table th:nth-child(1),
+.pcu-scoreboard-table td:nth-child(1) {
+  width: 22%;
+}
+
+.pcu-scoreboard-table th:nth-child(2),
+.pcu-scoreboard-table td:nth-child(2) {
+  width: 50%;
+}
+
+.pcu-scoreboard-table th:nth-child(3),
+.pcu-scoreboard-table td:nth-child(3) {
+  width: 28%;
+}
+
+.pcu-scoreboard-table th:nth-child(3) {
+  text-align: right;
+  white-space: nowrap;
 }
 
 .pcu-scoreboard-table td {
@@ -1024,6 +1045,10 @@ body {
 
 .share-choice-group + .field {
   margin-top: 1.75rem;
+}
+
+.estimated-time-save-field {
+  margin-bottom: 0.75rem;
 }
 
 .submit-row {
