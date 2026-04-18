@@ -9,6 +9,8 @@ export interface Agent {
   status: AgentStatus;
   promptCount: number;
   updatedDate?: string;
+  /** ISO time of the most recent prompt activity for this agent (from `prompts`). */
+  latestPromptAt?: string;
   category: string;
   roleTags?: string[];
   usageCount?: number;

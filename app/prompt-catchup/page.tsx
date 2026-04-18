@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { filterAgents } from "@/lib/filter";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { agentNewestMillis, filterAgents, filterAgentsNoSort, sortAgentsBy } from "@/lib/filter";
 import { Agent, Group, SortBy } from "@/lib/types";
 import { getMyUpvotes, getUpvoteCounts, trackActivity } from "@/lib/client-api";
 import { getRunPromptTargetUrl } from "@/lib/run-prompt";
@@ -71,7 +71,7 @@ export default function PromptCatchupPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserRole, setCurrentUserRole] = useState<string>(CURRENT_USER_ROLE);
 
-  useEffect(() => {
+  const applyStoredUserRole = () => {
     const fromStorage = localStorage.getItem("pcu_user_role");
     const normalized = String(fromStorage ?? "")
       .trim()
@@ -79,6 +79,11 @@ export default function PromptCatchupPage() {
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "");
     setCurrentUserRole(normalized || CURRENT_USER_ROLE);
+  };
+
+  const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+  useIsoLayoutEffect(() => {
+    applyStoredUserRole();
   }, []);
 
   async function loadHomeData() {
@@ -130,24 +135,34 @@ export default function PromptCatchupPage() {
   }, [viewMode]);
 
   const filteredAgents = useMemo(() => {
-    const byFilter = filterAgents(agents, "", "all", sort, group);
+    const baseFiltered = filterAgentsNoSort(agents, "", "all", group);
     const q = search.toLowerCase().trim();
-    let searched = byFilter;
+    let searched = baseFiltered;
     if (q) {
-      searched = byFilter.filter((a) => {
+      searched = baseFiltered.filter((a) => {
         const texts = promptTextsByAgent[a.id];
         if (!texts?.length) return false;
         return texts.some((t) => t.toLowerCase().includes(q));
       });
     }
 
-    if (viewMode === "all_agents") return searched;
+    if (viewMode === "all_agents") {
+      return sortAgentsBy(searched, sort);
+    }
 
     if (viewMode === "most_used") {
       return [...searched].sort((a, b) => {
         const uA = a.usageCount ?? 0;
         const uB = b.usageCount ?? 0;
-        return uB - uA || b.promptCount - a.promptCount;
+        if (uB !== uA) return uB - uA;
+        switch (sort) {
+          case "alphabetical":
+            return a.name.localeCompare(b.name);
+          case "newest":
+            return agentNewestMillis(b) - agentNewestMillis(a) || b.promptCount - a.promptCount;
+          default:
+            return b.promptCount - a.promptCount;
+        }
       });
     }
 
@@ -157,17 +172,7 @@ export default function PromptCatchupPage() {
       if (agentMatchesForMyRole(agent, promptRolesByAgent, currentUserRole)) matched.push(agent);
       else unmatched.push(agent);
     }
-    matched.sort((a, b) => {
-      const uA = a.usageCount ?? 0;
-      const uB = b.usageCount ?? 0;
-      return uB - uA || b.promptCount - a.promptCount;
-    });
-    unmatched.sort((a, b) => {
-      const uA = a.usageCount ?? 0;
-      const uB = b.usageCount ?? 0;
-      return uB - uA || b.promptCount - a.promptCount;
-    });
-    return [...matched, ...unmatched];
+    return [...sortAgentsBy(matched, sort), ...sortAgentsBy(unmatched, sort)];
   }, [agents, search, sort, group, promptTextsByAgent, promptRolesByAgent, viewMode, currentUserRole]);
 
   const groupsWithCounts = useMemo(() => {

@@ -1,10 +1,18 @@
 import { Agent, RecommendStatus, SortBy } from "@/lib/types";
 
-export function filterAgents(
+/** Millis for "Newest": latest prompt activity if known, else agent card `updatedDate`. */
+export function agentNewestMillis(agent: Agent): number {
+  const fromPrompt = agent.latestPromptAt ? new Date(agent.latestPromptAt).getTime() : NaN;
+  if (Number.isFinite(fromPrompt) && fromPrompt > 0) return fromPrompt;
+  const fromAgent = agent.updatedDate ? new Date(agent.updatedDate).getTime() : NaN;
+  return Number.isFinite(fromAgent) ? fromAgent : 0;
+}
+
+/** Category / name search / status only — no ordering. */
+export function filterAgentsNoSort(
   agents: Agent[],
   search: string,
   status: RecommendStatus,
-  sort: SortBy,
   groupSlug: string | null
 ): Agent[] {
   let result = [...agents];
@@ -25,19 +33,32 @@ export function filterAgents(
     result = result.filter((a) => a.status === mapped);
   }
 
+  return result;
+}
+
+/** Sort a copy of agents by catalog sort mode (Most Prompts / Newest / Alphabetical). */
+export function sortAgentsBy(agents: Agent[], sort: SortBy): Agent[] {
+  const copy = [...agents];
   switch (sort) {
     case "alphabetical":
-      result.sort((a, b) => a.name.localeCompare(b.name));
+      copy.sort((a, b) => a.name.localeCompare(b.name));
       break;
     case "newest":
-      result.sort(
-        (a, b) => new Date(b.updatedDate ?? "").getTime() - new Date(a.updatedDate ?? "").getTime()
-      );
+      copy.sort((a, b) => agentNewestMillis(b) - agentNewestMillis(a));
       break;
     default:
-      result.sort((a, b) => b.promptCount - a.promptCount);
+      copy.sort((a, b) => b.promptCount - a.promptCount);
       break;
   }
+  return copy;
+}
 
-  return result;
+export function filterAgents(
+  agents: Agent[],
+  search: string,
+  status: RecommendStatus,
+  sort: SortBy,
+  groupSlug: string | null
+): Agent[] {
+  return sortAgentsBy(filterAgentsNoSort(agents, search, status, groupSlug), sort);
 }

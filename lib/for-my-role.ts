@@ -13,8 +13,7 @@ function normalizeRoleSlug(s: string | undefined): string {
 /**
  * True if this assistant should appear in the "For my role" bucket when any prompt
  * for this agent has `role` or `roleTags` matching the user role (after normalization).
- *
- * Optional: also match on agent `roleTags` (see commented block below).
+ * Agent-level `roleTags` are not used — matching is prompt-only.
  */
 export function agentMatchesForMyRole(
   agent: Agent,
@@ -23,10 +22,6 @@ export function agentMatchesForMyRole(
 ): boolean {
   const want = normalizeRoleSlug(userRole);
   if (!want) return false;
-
-  // Agent-level tags (from `agents` collection) — skipped for now; use prompt role data only.
-  // const agentTags = agent.roleTags ?? [];
-  // if (agentTags.some((t) => normalizeRoleSlug(t) === want)) return true;
 
   const rows = promptRolesByAgent[agent.id] ?? [];
   for (const row of rows) {

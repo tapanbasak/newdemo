@@ -23,7 +23,19 @@ export async function GET() {
       .collection("prompts")
       .find(
         {},
-        { projection: { _id: 0, agentId: 1, prompt: 1, description: 1, role: 1, roleTags: 1 } }
+        {
+          projection: {
+            _id: 0,
+            agentId: 1,
+            prompt: 1,
+            description: 1,
+            role: 1,
+            roleTags: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            lastUpdated: 1,
+          },
+        }
       )
       .toArray(),
     db!
@@ -60,6 +72,28 @@ export async function GET() {
   const promptCountsByAgent: Record<number, number> = {};
   const promptTextsByAgent: Record<number, string[]> = {};
   const promptRolesByAgent: Record<number, Array<{ role?: string; roleTags?: string[] }>> = {};
+  const latestPromptMillisByAgent: Record<number, number> = {};
+
+  function millisFromPromptRow(row: Record<string, unknown>): number[] {
+    const out: number[] = [];
+    for (const key of ["createdAt", "updatedAt"] as const) {
+      const v = row[key];
+      if (v instanceof Date) {
+        const t = v.getTime();
+        if (Number.isFinite(t)) out.push(t);
+      } else if (v != null && v !== "") {
+        const t = new Date(String(v)).getTime();
+        if (Number.isFinite(t)) out.push(t);
+      }
+    }
+    const lu = row.lastUpdated;
+    if (typeof lu === "string" && lu.trim()) {
+      const t = new Date(lu).getTime();
+      if (Number.isFinite(t)) out.push(t);
+    }
+    return out;
+  }
+
   for (const row of promptsRaw) {
     const id = Number(row.agentId);
     if (!Number.isFinite(id)) continue;
@@ -76,6 +110,12 @@ export async function GET() {
       if (!promptRolesByAgent[id]) promptRolesByAgent[id] = [];
       promptRolesByAgent[id].push({ role, roleTags });
     }
+
+    const times = millisFromPromptRow(row as Record<string, unknown>);
+    const rowMax = times.length ? Math.max(...times) : 0;
+    if (rowMax > 0) {
+      latestPromptMillisByAgent[id] = Math.max(latestPromptMillisByAgent[id] ?? 0, rowMax);
+    }
   }
 
   const agents = agentsRaw.map((a) => ({
@@ -85,6 +125,10 @@ export async function GET() {
     status: a.status === "UNDER_EVALUATION" ? "UNDER_EVALUATION" : "ADOPT",
     promptCount: promptCountsByAgent[Number(a.agentId)] ?? 0,
     updatedDate: a.updatedDate ? String(a.updatedDate) : undefined,
+    latestPromptAt: (() => {
+      const ms = latestPromptMillisByAgent[Number(a.agentId)];
+      return ms ? new Date(ms).toISOString() : undefined;
+    })(),
     category: String(a.category ?? ""),
     roleTags: Array.isArray(a.roleTags) ? a.roleTags : [],
     usageCount: usageByAgent[Number(a.agentId)] ?? 0,
