@@ -136,44 +136,35 @@ export default function PromptCatchupPage() {
 
   const filteredAgents = useMemo(() => {
     const baseFiltered = filterAgentsNoSort(agents, "", "all", group);
+    const compareMostUsed = (a: Agent, b: Agent) => {
+      // Alphabetical should always be based on agent card title only.
+      if (sort === "alphabetical") {
+        return a.name.localeCompare(b.name);
+      }
+      const uA = a.usageCount ?? 0;
+      const uB = b.usageCount ?? 0;
+      if (uB !== uA) return uB - uA;
+      switch (sort) {
+        case "newest":
+          return agentNewestMillis(b) - agentNewestMillis(a) || b.promptCount - a.promptCount;
+        default:
+          return b.promptCount - a.promptCount;
+      }
+    };
+
+    // Apply sorting on the full eligible dataset first, then filter.
+    const globallySorted =
+      viewMode === "most_used" ? [...baseFiltered].sort(compareMostUsed) : sortAgentsBy(baseFiltered, sort);
+
     const q = search.toLowerCase().trim();
-    let searched = baseFiltered;
-    if (q) {
-      searched = baseFiltered.filter((a) => {
-        const texts = promptTextsByAgent[a.id];
-        if (!texts?.length) return false;
-        return texts.some((t) => t.toLowerCase().includes(q));
-      });
+    const searched = q ? globallySorted.filter((a) => a.name.toLowerCase().includes(q)) : globallySorted;
+
+    if (viewMode === "all_agents" || viewMode === "most_used" || viewMode === "for_my_role") {
+      return searched;
     }
 
-    if (viewMode === "all_agents") {
-      return sortAgentsBy(searched, sort);
-    }
-
-    if (viewMode === "most_used") {
-      return [...searched].sort((a, b) => {
-        const uA = a.usageCount ?? 0;
-        const uB = b.usageCount ?? 0;
-        if (uB !== uA) return uB - uA;
-        switch (sort) {
-          case "alphabetical":
-            return a.name.localeCompare(b.name);
-          case "newest":
-            return agentNewestMillis(b) - agentNewestMillis(a) || b.promptCount - a.promptCount;
-          default:
-            return b.promptCount - a.promptCount;
-        }
-      });
-    }
-
-    const matched: typeof searched = [];
-    const unmatched: typeof searched = [];
-    for (const agent of searched) {
-      if (agentMatchesForMyRole(agent, promptRolesByAgent, currentUserRole)) matched.push(agent);
-      else unmatched.push(agent);
-    }
-    return [...sortAgentsBy(matched, sort), ...sortAgentsBy(unmatched, sort)];
-  }, [agents, search, sort, group, promptTextsByAgent, promptRolesByAgent, viewMode, currentUserRole]);
+    return searched;
+  }, [agents, search, sort, group, viewMode]);
 
   const groupsWithCounts = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -181,15 +172,11 @@ export default function PromptCatchupPage() {
       if (g.slug === "my-upvotes") return { ...g, count: myCount };
       let list = filterAgents(agents, "", "all", "most_prompts", g.slug);
       if (q) {
-        list = list.filter((a) => {
-          const texts = promptTextsByAgent[a.id];
-          if (!texts?.length) return false;
-          return texts.some((t) => t.toLowerCase().includes(q));
-        });
+        list = list.filter((a) => a.name.toLowerCase().includes(q));
       }
       return { ...g, count: list.length };
     });
-  }, [agents, groups, search, myCount, promptTextsByAgent]);
+  }, [agents, groups, search, myCount]);
 
   const filteredMyUpvotes = useMemo(() => {
     if (group !== "my-upvotes") return [];
@@ -436,7 +423,7 @@ export default function PromptCatchupPage() {
             ) : (
               <>
                 <div className="pcu-filter-bar">
-                  <input className="form-control" placeholder="Search prompts" value={search} onChange={(e) => setSearch(e.target.value)} />
+                  <input className="form-control" placeholder="Search by card title" value={search} onChange={(e) => setSearch(e.target.value)} />
                   <select className="form-select" value={viewMode} onChange={(e) => setViewMode(e.target.value as ViewMode)}>
                     <option value="for_my_role">For my role</option>
                     <option value="most_used">Most used</option>
