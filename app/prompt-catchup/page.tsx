@@ -159,12 +159,16 @@ export default function PromptCatchupPage() {
     const q = search.toLowerCase().trim();
     const searched = q ? globallySorted.filter((a) => a.name.toLowerCase().includes(q)) : globallySorted;
 
-    if (viewMode === "all_agents" || viewMode === "most_used" || viewMode === "for_my_role") {
+    if (viewMode === "all_agents" || viewMode === "most_used") {
       return searched;
     }
 
+    if (viewMode === "for_my_role") {
+      return searched.filter((agent) => agentMatchesForMyRole(agent, promptRolesByAgent, currentUserRole));
+    }
+
     return searched;
-  }, [agents, search, sort, group, viewMode]);
+  }, [agents, search, sort, group, promptRolesByAgent, viewMode, currentUserRole]);
 
   const groupsWithCounts = useMemo(() => {
     const q = search.toLowerCase().trim();
