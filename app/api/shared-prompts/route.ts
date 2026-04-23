@@ -3,15 +3,31 @@ import { SharedPrompt } from "@/lib/types";
 import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(req: Request) {
   if (!hasMongo()) {
     return NextResponse.json({ error: "MongoDB is not configured" }, { status: 500 });
   }
+  const url = new URL(req.url);
+  const mine = url.searchParams.get("mine") === "1";
+  const soeid = String(url.searchParams.get("soeid") ?? "").trim().toLowerCase();
   const db = await getDb();
-  const rows = await db!
-    .collection<SharedPrompt>("shared_prompts")
-    .find({}, { projection: { _id: 0 } })
-    .toArray();
+  const rows = mine
+    ? await db!
+        .collection("shared_prompts")
+        .find(soeid ? { createdBySoeid: soeid } : { createdBySoeid: "__none__" })
+        .sort({ createdAt: -1 })
+        .toArray()
+    : await db!
+        .collection<SharedPrompt>("shared_prompts")
+        .find({}, { projection: { _id: 0 } })
+        .toArray();
+  if (mine) {
+    const normalized = rows.map((row) => {
+      const { _id, ...rest } = row as Record<string, unknown>;
+      return { id: String(_id), ...rest };
+    });
+    return NextResponse.json(normalized);
+  }
   return NextResponse.json(rows);
 }
 
@@ -27,6 +43,12 @@ export async function POST(req: Request) {
       .trim()
       .toLowerCase()
       .replace(/[^a-z0-9]/g, "");
+  const roleLabelFromTag = (tag: string) =>
+    tag
+      .split("-")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
 
   const body = (await req.json()) as SharedPrompt;
   if (!body.title || !body.createdBy || !body.createdBySoeid || !body.prompt || !body.platform) {
@@ -49,6 +71,12 @@ export async function POST(req: Request) {
     )
   );
   const canonicalRole = canonicalRoleTags[0] ?? "";
+  const customRoleLabel = String(body.customRoleLabel ?? "").trim();
+  const customRoleTag = normalizeRoleTag(customRoleLabel);
+  const preferredRoleLabels = new Map<string, string>();
+  if (customRoleLabel && customRoleTag) {
+    preferredRoleLabels.set(customRoleTag, customRoleLabel);
+  }
   if (!canonicalRoleTags.length) return NextResponse.json({ error: "Invalid role value" }, { status: 400 });
   const estimatedTimeSaveMinutes = Number(body.estimatedTimeSaveMinutes);
   if (!Number.isInteger(estimatedTimeSaveMinutes) || estimatedTimeSaveMinutes < 0) {
@@ -81,6 +109,49 @@ export async function POST(req: Request) {
       { projection: { _id: 0, agentId: 1, name: 1, roleTags: 1 } }
     )
     .toArray();
+  const roleAgentIdByTag = new Map<string, number>();
+  for (const agent of roleAgents) {
+    const id = Number(agent.agentId);
+    if (!Number.isFinite(id)) continue;
+    const nameTag = normalizeRoleTag(agent.name ?? "");
+    if (nameTag) roleAgentIdByTag.set(nameTag, id);
+    const tags = Array.isArray(agent.roleTags) ? agent.roleTags.map((value) => normalizeRoleTag(value)) : [];
+    for (const tag of tags) {
+      if (tag) roleAgentIdByTag.set(tag, id);
+    }
+  }
+
+  let nextAgentId: number | null = null;
+  for (const tag of canonicalRoleTags) {
+    if (roleAgentIdByTag.has(tag)) continue;
+    if (nextAgentId == null) {
+      const maxAgent = await db!
+        .collection("agents")
+        .find({}, { projection: { _id: 0, agentId: 1 } })
+        .sort({ agentId: -1 })
+        .limit(1)
+        .toArray();
+      nextAgentId = (Number(maxAgent[0]?.agentId) || 0) + 1;
+    }
+    const now = new Date();
+    const newId = nextAgentId++;
+    const roleName = preferredRoleLabels.get(tag) || roleLabelFromTag(tag);
+    await db!.collection("agents").insertOne({
+      agentId: newId,
+      name: roleName,
+      description: `${roleName} prompts that help role-specific workflows and execution.`,
+      status: "ADOPT",
+      promptCount: 0,
+      updatedDate: now.toISOString().slice(0, 10),
+      category: "roles",
+      roleTags: [tag],
+      usageCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+    roleAgentIdByTag.set(tag, newId);
+  }
+
   const roleAgentIds = roleAgents
     .filter((agent) => {
       const rowTags = Array.isArray(agent.roleTags) ? agent.roleTags.map((value) => normalizeRoleTag(value)) : [];
@@ -89,6 +160,12 @@ export async function POST(req: Request) {
     })
     .map((agent) => Number(agent.agentId))
     .filter((id) => Number.isFinite(id));
+  for (const tag of canonicalRoleTags) {
+    const roleAgentId = roleAgentIdByTag.get(tag);
+    if (roleAgentId != null && Number.isFinite(roleAgentId)) {
+      roleAgentIds.push(roleAgentId);
+    }
+  }
 
   const appAgents = await db!
     .collection("agents")
@@ -160,6 +237,7 @@ export async function POST(req: Request) {
       const nextPromptId = (Number(maxPrompt[0]?.promptId) || 0) + 1;
       const promptRes = await db!.collection("prompts").insertOne({
         agentId,
+        sharedPromptId: sharedInsertId,
         promptId: nextPromptId,
         title: body.title,
         prompt: body.prompt,

@@ -154,7 +154,9 @@ export default function PromptCatchupPage() {
 
     // Apply sorting on the full eligible dataset first, then filter.
     const globallySorted =
-      viewMode === "most_used" ? [...baseFiltered].sort(compareMostUsed) : sortAgentsBy(baseFiltered, sort);
+      viewMode === "most_used" && sort !== "newest" && sort !== "alphabetical"
+        ? [...baseFiltered].sort(compareMostUsed)
+        : sortAgentsBy(baseFiltered, sort);
 
     const q = search.toLowerCase().trim();
     const searched = q ? globallySorted.filter((a) => a.name.toLowerCase().includes(q)) : globallySorted;
@@ -164,7 +166,16 @@ export default function PromptCatchupPage() {
     }
 
     if (viewMode === "for_my_role") {
-      return searched.filter((agent) => agentMatchesForMyRole(agent, promptRolesByAgent, currentUserRole));
+      if (sort === "newest" || sort === "alphabetical") {
+        return searched;
+      }
+      const matched: Agent[] = [];
+      const unmatched: Agent[] = [];
+      for (const agent of searched) {
+        if (agentMatchesForMyRole(agent, promptRolesByAgent, currentUserRole)) matched.push(agent);
+        else unmatched.push(agent);
+      }
+      return [...matched, ...unmatched];
     }
 
     return searched;

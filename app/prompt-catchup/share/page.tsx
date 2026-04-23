@@ -17,18 +17,26 @@ const PLATFORM_OPTIONS = [
   { value: "other", label: "Other (free text)" },
 ] as const;
 
-/** Slugs align with dashboard / DB; labels match the role picker design. */
-const ROLE_OPTIONS = [
-  { value: "incident-manager", label: "Incident Manager" },
-  { value: "release-manager", label: "Release Manager" },
-  { value: "scrum-master", label: "Scrum Master" },
-  { value: "quality-engineer", label: "Quality Engineer" },
-  { value: "developer", label: "Developer / Software Engineer" },
-  { value: "business-analyst", label: "Business Analyst" },
-  { value: "data-analyst", label: "Data Analyst" },
-  { value: "product-owner", label: "Product Owner" },
-  { value: "other", label: "Other (free text)" },
-] as const;
+const OTHER_ROLE_OPTION = { value: "other", label: "Other (free text)" } as const;
+const USER_SOEID_KEY = "pcu_user_soeid";
+const BUSINESS_ORG_BY_SOEID_KEY = "pcu_business_org_by_soeid";
+const DEMO_SOEID = "demo.soeid";
+const DEMO_BUSINESS_ORG = "U. S Personal Banking";
+
+function normalizeRoleValue(input: string) {
+  return String(input)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
+function normalizeLooseText(input: string) {
+  return String(input)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
 
 export default function SharePromptPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -38,14 +46,38 @@ export default function SharePromptPage() {
   const [attachments, setAttachments] = useState("");
   const [selectedPlatformOption, setSelectedPlatformOption] = useState<string>("stylus");
   const [customPlatform, setCustomPlatform] = useState("");
-  const [selectedRoleOptions, setSelectedRoleOptions] = useState<string[]>(["developer"]);
+  const [selectedRoleOptions, setSelectedRoleOptions] = useState<string[]>([]);
   const [customRole, setCustomRole] = useState("");
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [didAutoPopulateBusinessOrg, setDidAutoPopulateBusinessOrg] = useState(false);
   const audienceGroups = useMemo(
     () => groups.filter((g) => g.slug !== "my-upvotes" && g.slug !== "roles" && g.slug !== "role"),
     [groups]
   );
+  const roleOptions = useMemo(() => {
+    const merged = new Map<string, string>();
+    for (const agent of agents) {
+      if (agent.category !== "roles" && agent.category !== "role") continue;
+      const value = normalizeRoleValue(agent.name);
+      if (!value || value === "other") continue;
+      if (!merged.has(value)) merged.set(value, agent.name);
+    }
+    return [
+      ...Array.from(merged.entries()).map(([value, label]) => ({ value, label })),
+      { ...OTHER_ROLE_OPTION },
+    ];
+  }, [agents]);
+
+  useEffect(() => {
+    if (selectedRoleOptions.length > 0) return;
+    const fallback =
+      roleOptions.find((r) => r.value === "developer-software-engineer" || r.value === "developer")?.value ??
+      roleOptions.find((r) => r.value !== "other")?.value;
+    if (fallback) {
+      setSelectedRoleOptions([fallback]);
+    }
+  }, [roleOptions, selectedRoleOptions.length]);
 
   async function loadShareData() {
     setError("");
@@ -70,6 +102,53 @@ export default function SharePromptPage() {
   useEffect(() => {
     loadShareData();
   }, []);
+
+  useEffect(() => {
+    if (didAutoPopulateBusinessOrg || agents.length === 0 || groups.length === 0) return;
+
+    const currentSoeid =
+      String(localStorage.getItem(USER_SOEID_KEY) ?? "")
+        .trim()
+        .toLowerCase() || DEMO_SOEID;
+    localStorage.setItem(USER_SOEID_KEY, currentSoeid);
+
+    let mapping: Record<string, string> = {};
+    try {
+      const raw = localStorage.getItem(BUSINESS_ORG_BY_SOEID_KEY);
+      mapping = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    } catch {
+      mapping = {};
+    }
+
+    if (!mapping[currentSoeid]) {
+      mapping[currentSoeid] = DEMO_BUSINESS_ORG;
+      localStorage.setItem(BUSINESS_ORG_BY_SOEID_KEY, JSON.stringify(mapping));
+    }
+
+    const mappedOrg = String(mapping[currentSoeid] ?? "").trim();
+    if (!mappedOrg) {
+      setDidAutoPopulateBusinessOrg(true);
+      return;
+    }
+
+    const businessOrgSlug = "business-org";
+    const match = agents.find(
+      (a) =>
+        a.category === businessOrgSlug && normalizeLooseText(a.name) === normalizeLooseText(mappedOrg)
+    );
+    if (!match) {
+      setDidAutoPopulateBusinessOrg(true);
+      return;
+    }
+
+    setAudience((prev) => Array.from(new Set([...prev, businessOrgSlug, `agent:${match.id}`])));
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      next.add(businessOrgSlug);
+      return next;
+    });
+    setDidAutoPopulateBusinessOrg(true);
+  }, [agents, groups, didAutoPopulateBusinessOrg]);
 
   function isAudienceSelected(identifier: string) {
     return audience.includes(identifier);
@@ -168,6 +247,7 @@ export default function SharePromptPage() {
         platform: selectedPlatform,
         role: selectedRoleTags[0],
         roleTags: selectedRoleTags,
+        customRoleLabel: isRoleSelected("other") ? customRole.trim() : "",
         estimatedTimeSaveMinutes,
         prompt: String(form.get("prompt") || ""),
         description: String(form.get("description") || ""),
@@ -179,7 +259,7 @@ export default function SharePromptPage() {
       setAttachments("");
       setSelectedPlatformOption("stylus");
       setCustomPlatform("");
-      setSelectedRoleOptions(["developer"]);
+      setSelectedRoleOptions([]);
       setCustomRole("");
       setSuccess(true);
     } catch (err) {
@@ -204,6 +284,9 @@ export default function SharePromptPage() {
           <nav className="sidebar-nav">
             <Link href="/prompt-catchup/share" className="sidebar-link active">
               Share your Prompt
+            </Link>
+            <Link href="/prompt-catchup/manage" className="sidebar-link">
+              Manage your Prompts
             </Link>
             <Link href="/prompt-catchup" className="sidebar-link">
               Home
@@ -342,7 +425,7 @@ export default function SharePromptPage() {
                   </div>
                   <div className="field platform-field">
                     <div className="platform-options" role="group" aria-label="Role selection">
-                      {ROLE_OPTIONS.map((role) => (
+                      {roleOptions.map((role) => (
                         <label className="platform-option" key={role.value}>
                           <input
                             type="checkbox"

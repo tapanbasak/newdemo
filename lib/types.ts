@@ -55,6 +55,8 @@ export interface SharedPrompt {
   role?: string;
   /** Selected role tags (single today or multi-select). */
   roleTags?: string[];
+  /** Original free-text role label when "Other" is used. */
+  customRoleLabel?: string;
   /** Estimated time save in minutes per run. */
   estimatedTimeSaveMinutes?: number;
   prompt: string;
