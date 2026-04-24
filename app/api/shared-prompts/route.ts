@@ -3,18 +3,30 @@ import { SharedPrompt } from "@/lib/types";
 import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
 
+function normalizeSoeid(input: unknown) {
+  return String(input ?? "").trim().toLowerCase();
+}
+
+function escapeRegex(input: string) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export async function GET(req: Request) {
   if (!hasMongo()) {
     return NextResponse.json({ error: "MongoDB is not configured" }, { status: 500 });
   }
   const url = new URL(req.url);
   const mine = url.searchParams.get("mine") === "1";
-  const soeid = String(url.searchParams.get("soeid") ?? "").trim().toLowerCase();
+  const soeid = normalizeSoeid(url.searchParams.get("soeid"));
   const db = await getDb();
   const rows = mine
     ? await db!
         .collection("shared_prompts")
-        .find(soeid ? { createdBySoeid: soeid } : { createdBySoeid: "__none__" })
+        .find(
+          soeid
+            ? { createdBySoeid: { $regex: `^${escapeRegex(soeid)}$`, $options: "i" } }
+            : { createdBySoeid: "__none__" }
+        )
         .sort({ createdAt: -1 })
         .toArray()
     : await db!
@@ -54,6 +66,7 @@ export async function POST(req: Request) {
   if (!body.title || !body.createdBy || !body.createdBySoeid || !body.prompt || !body.platform) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
+  const normalizedCreatedBySoeid = normalizeSoeid(body.createdBySoeid);
   const incomingPlatform = String(body.platform).trim().toLowerCase();
   const normalizedPlatform = incomingPlatform
     .replace(/\s+/g, "_")
@@ -206,7 +219,7 @@ export async function POST(req: Request) {
   const sharedDoc = {
     title: body.title,
     createdBy: body.createdBy,
-    createdBySoeid: body.createdBySoeid,
+    createdBySoeid: normalizedCreatedBySoeid,
     audience: body.audience,
     prompt: body.prompt,
     description: body.description ?? "",
@@ -253,7 +266,7 @@ export async function POST(req: Request) {
         role: canonicalRole,
         roleTags,
         estimatedTimeSaveMinutes,
-        createdBySoeid: body.createdBySoeid,
+        createdBySoeid: normalizedCreatedBySoeid,
         audienceTokens,
         attachments: body.attachments || "",
         createdAt: new Date(),

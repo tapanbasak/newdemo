@@ -20,6 +20,11 @@ type MyUpvoteRow = {
   upvotes?: number;
   platform?: string;
 };
+const USER_SOEID_KEY = "cone-soeid";
+const USER_PROFILE_KEY = "cone-user-profile";
+const BUSINESS_ORG_BY_SOEID_KEY = "pcu_business_org_by_soeid";
+const USER_ROLE_KEY = "pcu_user_role";
+const FALLBACK_SOEID = "tb97406";
 
 function normalizeGroups(input: Group[]): Group[] {
   const mapped = input.map((g) =>
@@ -126,6 +131,49 @@ export default function PromptCatchupPage() {
 
   useEffect(() => {
     loadHomeData();
+  }, []);
+
+  useEffect(() => {
+    async function loadAndStoreUserProfile() {
+      const soeid = String(localStorage.getItem(USER_SOEID_KEY) ?? "").trim().toLowerCase() || FALLBACK_SOEID;
+      localStorage.setItem(USER_SOEID_KEY, soeid);
+      try {
+        const profileRes = await fetch(`/api/user-profile?soeid=${encodeURIComponent(soeid)}`, { cache: "no-store" });
+        if (!profileRes.ok) return;
+        const data = (await profileRes.json()) as {
+          user?: {
+            soeId?: string;
+            firstName?: string;
+            lastName?: string;
+            departmentName?: string;
+            mappedRole?: { roleKey?: string; roleLabel?: string };
+          };
+        };
+        if (!data?.user) return;
+        localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(data.user));
+        const normalizedSoeid = String(data.user.soeId ?? soeid).trim().toLowerCase();
+        if (normalizedSoeid) localStorage.setItem(USER_SOEID_KEY, normalizedSoeid);
+        const mappedRoleKey = String(data.user.mappedRole?.roleKey ?? "").trim().toLowerCase();
+        if (mappedRoleKey) {
+          localStorage.setItem(USER_ROLE_KEY, mappedRoleKey);
+          setCurrentUserRole(mappedRoleKey);
+        }
+        const department = String(data.user.departmentName ?? "").trim();
+        if (department) {
+          const mappedBusinessOrg =
+            department.toUpperCase().includes("USPB") ? "U. S Personal Banking" : "";
+          if (mappedBusinessOrg) {
+            const raw = localStorage.getItem(BUSINESS_ORG_BY_SOEID_KEY);
+            const parsed = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+            parsed[normalizedSoeid || soeid] = mappedBusinessOrg;
+            localStorage.setItem(BUSINESS_ORG_BY_SOEID_KEY, JSON.stringify(parsed));
+          }
+        }
+      } catch {
+        // no-op for local dev/offline simulation failures
+      }
+    }
+    loadAndStoreUserProfile();
   }, []);
 
   useEffect(() => {

@@ -18,7 +18,8 @@ const PLATFORM_OPTIONS = [
 ] as const;
 
 const OTHER_ROLE_OPTION = { value: "other", label: "Other (free text)" } as const;
-const USER_SOEID_KEY = "pcu_user_soeid";
+const USER_SOEID_KEY = "cone-soeid";
+const USER_PROFILE_KEY = "cone-user-profile";
 const BUSINESS_ORG_BY_SOEID_KEY = "pcu_business_org_by_soeid";
 const DEMO_SOEID = "demo.soeid";
 const DEMO_BUSINESS_ORG = "U. S Personal Banking";
@@ -51,6 +52,10 @@ export default function SharePromptPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [didAutoPopulateBusinessOrg, setDidAutoPopulateBusinessOrg] = useState(false);
+  const [createdBy, setCreatedBy] = useState("");
+  const [createdBySoeid, setCreatedBySoeid] = useState("");
+  const [preferredRoleValue, setPreferredRoleValue] = useState("");
+  const [preferredRoleLabel, setPreferredRoleLabel] = useState("");
   const audienceGroups = useMemo(
     () => groups.filter((g) => g.slug !== "my-upvotes" && g.slug !== "roles" && g.slug !== "role"),
     [groups]
@@ -70,6 +75,27 @@ export default function SharePromptPage() {
   }, [agents]);
 
   useEffect(() => {
+    if (preferredRoleValue) {
+      const hasExactRole = roleOptions.some((r) => r.value === preferredRoleValue);
+      const isAutoOtherSelection =
+        selectedRoleOptions.length === 1 &&
+        selectedRoleOptions[0] === "other" &&
+        normalizeRoleValue(customRole) === normalizeRoleValue(preferredRoleLabel || preferredRoleValue);
+      if (hasExactRole) {
+        if (selectedRoleOptions.length === 0 || isAutoOtherSelection) {
+          setSelectedRoleOptions([preferredRoleValue]);
+          if (customRole) setCustomRole("");
+        }
+        return;
+      }
+      if (preferredRoleLabel) {
+        if (selectedRoleOptions.length === 0) {
+          setSelectedRoleOptions(["other"]);
+          setCustomRole(preferredRoleLabel);
+        }
+        return;
+      }
+    }
     if (selectedRoleOptions.length > 0) return;
     const fallback =
       roleOptions.find((r) => r.value === "developer-software-engineer" || r.value === "developer")?.value ??
@@ -77,7 +103,7 @@ export default function SharePromptPage() {
     if (fallback) {
       setSelectedRoleOptions([fallback]);
     }
-  }, [roleOptions, selectedRoleOptions.length]);
+  }, [roleOptions, selectedRoleOptions, preferredRoleValue, preferredRoleLabel, customRole]);
 
   async function loadShareData() {
     setError("");
@@ -101,6 +127,31 @@ export default function SharePromptPage() {
 
   useEffect(() => {
     loadShareData();
+  }, []);
+
+  useEffect(() => {
+    const soeid = String(localStorage.getItem(USER_SOEID_KEY) ?? "").trim();
+    if (soeid) setCreatedBySoeid(soeid);
+    try {
+      const raw = localStorage.getItem(USER_PROFILE_KEY);
+      if (!raw) return;
+      const profile = JSON.parse(raw) as {
+        firstName?: string;
+        lastName?: string;
+        soeId?: string;
+        mappedRole?: { roleKey?: string; roleLabel?: string };
+      };
+      const fullName = `${String(profile.firstName ?? "").trim()} ${String(profile.lastName ?? "").trim()}`.trim();
+      if (fullName) setCreatedBy(fullName);
+      if (profile.soeId) setCreatedBySoeid(String(profile.soeId).trim().toLowerCase());
+      const mappedRoleValue = normalizeRoleValue(
+        String(profile.mappedRole?.roleKey ?? profile.mappedRole?.roleLabel ?? "")
+      );
+      if (mappedRoleValue) setPreferredRoleValue(mappedRoleValue);
+      if (profile.mappedRole?.roleLabel) setPreferredRoleLabel(String(profile.mappedRole.roleLabel));
+    } catch {
+      // ignore malformed local profile
+    }
   }, []);
 
   useEffect(() => {
@@ -241,8 +292,8 @@ export default function SharePromptPage() {
     try {
       await sharePrompt({
         title: String(form.get("title") || ""),
-        createdBy: String(form.get("createdBy") || ""),
-        createdBySoeid: String(form.get("createdBySoeid") || ""),
+        createdBy: String(form.get("createdBy") || "").trim(),
+        createdBySoeid: String(form.get("createdBySoeid") || "").trim().toLowerCase(),
         audience: audience.join(", "),
         platform: selectedPlatform,
         role: selectedRoleTags[0],
@@ -261,6 +312,7 @@ export default function SharePromptPage() {
       setCustomPlatform("");
       setSelectedRoleOptions([]);
       setCustomRole("");
+      setCreatedBySoeid(String(localStorage.getItem(USER_SOEID_KEY) ?? "").trim().toLowerCase());
       setSuccess(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to submit prompt.";
@@ -315,11 +367,17 @@ export default function SharePromptPage() {
                 </div>
                 <div className="field">
                   <label>Created by</label>
-                  <input required type="text" name="createdBy" />
+                  <input required type="text" name="createdBy" value={createdBy} onChange={(e) => setCreatedBy(e.target.value)} />
                 </div>
                 <div className="field">
                   <label>Created by SOEID</label>
-                  <input required type="text" name="createdBySoeid" />
+                  <input
+                    required
+                    type="text"
+                    name="createdBySoeid"
+                    value={createdBySoeid}
+                    onChange={(e) => setCreatedBySoeid(e.target.value)}
+                  />
                 </div>
               </div>
 

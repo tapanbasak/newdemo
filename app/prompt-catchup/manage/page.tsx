@@ -8,7 +8,7 @@ import {
   type ManagedSharedPrompt,
 } from "@/lib/client-api";
 
-const USER_SOEID_KEY = "pcu_user_soeid";
+const USER_SOEID_KEY = "cone-soeid";
 const FALLBACK_SOEID = "tb97406";
 
 export default function ManagePromptsPage() {

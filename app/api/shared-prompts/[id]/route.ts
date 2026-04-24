@@ -5,6 +5,9 @@ import { NextResponse } from "next/server";
 function normalizeSoeid(input: unknown) {
   return String(input ?? "").trim().toLowerCase();
 }
+function escapeRegex(input: string) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 function normalizeRoleTag(input: unknown) {
   return String(input ?? "")
     .trim()
@@ -102,7 +105,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   promptUpdates.updatedAt = new Date();
 
   const linkedRes = await db!.collection("prompts").updateMany(
-    { sharedPromptId: _id, source: "share", createdBySoeid: soeid },
+    {
+      sharedPromptId: _id,
+      source: "share",
+      createdBySoeid: { $regex: `^${escapeRegex(soeid)}$`, $options: "i" },
+    },
     { $set: promptUpdates }
   );
 
@@ -111,7 +118,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     await db!.collection("prompts").updateMany(
       {
         source: "share",
-        createdBySoeid: soeid,
+        createdBySoeid: { $regex: `^${escapeRegex(soeid)}$`, $options: "i" },
         title: String(existing.title ?? ""),
         prompt: String(existing.prompt ?? ""),
       },
@@ -143,12 +150,12 @@ export async function DELETE(req: Request, ctx: { params: Promise<{ id: string }
   const linkedRes = await db!.collection("prompts").deleteMany({
     sharedPromptId: _id,
     source: "share",
-    createdBySoeid: soeid,
+    createdBySoeid: { $regex: `^${escapeRegex(soeid)}$`, $options: "i" },
   });
   if (linkedRes.deletedCount === 0) {
     await db!.collection("prompts").deleteMany({
       source: "share",
-      createdBySoeid: soeid,
+      createdBySoeid: { $regex: `^${escapeRegex(soeid)}$`, $options: "i" },
       title: String(existing.title ?? ""),
       prompt: String(existing.prompt ?? ""),
     });

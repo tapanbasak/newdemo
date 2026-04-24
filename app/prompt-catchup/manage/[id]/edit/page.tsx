@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { fetchMySharedPromptById, updateMySharedPrompt, type ManagedSharedPrompt } from "@/lib/client-api";
 import { Agent } from "@/lib/types";
 
-const USER_SOEID_KEY = "pcu_user_soeid";
+const USER_SOEID_KEY = "cone-soeid";
 const FALLBACK_SOEID = "tb97406";
 
 const PLATFORM_OPTIONS = [
