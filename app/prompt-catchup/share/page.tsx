@@ -76,14 +76,21 @@ export default function SharePromptPage() {
 
   useEffect(() => {
     if (preferredRoleValue) {
-      const hasExactRole = roleOptions.some((r) => r.value === preferredRoleValue);
+      const exactOption =
+        roleOptions.find((r) => r.value === preferredRoleValue) ??
+        roleOptions.find(
+          (r) =>
+            preferredRoleLabel &&
+            normalizeRoleValue(r.label) === normalizeRoleValue(preferredRoleLabel)
+        );
+      const hasExactRole = Boolean(exactOption);
       const isAutoOtherSelection =
         selectedRoleOptions.length === 1 &&
         selectedRoleOptions[0] === "other" &&
         normalizeRoleValue(customRole) === normalizeRoleValue(preferredRoleLabel || preferredRoleValue);
       if (hasExactRole) {
         if (selectedRoleOptions.length === 0 || isAutoOtherSelection) {
-          setSelectedRoleOptions([preferredRoleValue]);
+          setSelectedRoleOptions([String(exactOption?.value)]);
           if (customRole) setCustomRole("");
         }
         return;

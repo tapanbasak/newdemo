@@ -62,9 +62,9 @@ export async function GET(req: Request) {
         lastName: "Basak",
         emailAddress: "tapan.basak@iu.citi.com",
         jobCode: "NE1849",
-        jobCodeDescription: "tester",
+        jobCodeDescription: "Developer Senior",
         departmentName: "USPB CLOUD & API PLATFORM ENGINEERING (L8)",
-        mappedRole: mapJobCodeDescriptionToRole("tester"),
+        mappedRole: mapJobCodeDescriptionToRole("Developer Senior"),
       },
     });
   }
