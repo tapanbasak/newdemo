@@ -101,6 +101,7 @@ export default function PromptCatalogPage({ params }: { params: Promise<{ agentI
     const targetUrl = getRunPromptTargetUrl(prompt.platform);
 
     navigator.clipboard.writeText(text).then(() => {
+      trackActivity({ action: "copy_to_clipboard", agentId, promptId: prompt.id }).catch(() => undefined);
       setShowCopiedMessage(true);
       setTimeout(() => setShowCopiedMessage(false), 2500);
       if (targetUrl) {

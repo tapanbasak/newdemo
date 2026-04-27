@@ -1141,6 +1141,10 @@ body {
   color: #fff;
   padding: 0.5rem 0.85rem;
   font-size: 0.95rem;
+  line-height: 1.35;
+  resize: vertical;
+  min-height: 42px;
+  max-height: 120px;
 }
 
 .pcu-chatbox-input::placeholder {
@@ -1164,11 +1168,145 @@ body {
   justify-content: center;
 }
 
+.pcu-chat-v2-wrap {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.7rem;
+}
+
+.pcu-chat-v2-panel {
+  width: min(var(--pcu-chat-v2-width, 540px), calc(100vw - 2rem));
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: linear-gradient(160deg, #0c1d33 0%, #0a1629 58%, #081425 100%);
+  box-shadow: 0 18px 42px rgba(2, 6, 23, 0.45);
+  padding: 0.85rem;
+}
+
+.pcu-chat-v2-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.65rem;
+  color: #bfdbfe;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pcu-chat-v2-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #22d3ee;
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.16);
+}
+
+.pcu-chat-v2-title {
+  font-weight: 700;
+}
+
+.pcu-chat-v2-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.pcu-chat-v2-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.65);
+  color: #e2e8f0;
+  padding: 0.62rem 0.75rem;
+  font-size: 0.92rem;
+  line-height: 1.35;
+  resize: vertical;
+  min-height: 44px;
+  max-height: 130px;
+}
+
+.pcu-chat-v2-input::placeholder {
+  color: #94a3b8;
+}
+
+.pcu-chat-v2-input:focus {
+  outline: none;
+  border-color: rgba(34, 211, 238, 0.75);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2);
+}
+
+.pcu-chat-v2-send {
+  border: none;
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  background: linear-gradient(180deg, #67e8f9 0%, #06b6d4 100%);
+  color: #042f40;
+  min-width: 64px;
+}
+
+.pcu-chat-v2-launcher {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
+  height: 52px;
+  padding: 0 0.9rem 0 0.55rem;
+  background: linear-gradient(180deg, #0f2138 0%, #0b1a2e 100%);
+  color: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.52rem;
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.35);
+}
+
+.pcu-chat-v2-launcher.open {
+  border-color: rgba(103, 232, 249, 0.7);
+}
+
+.pcu-chat-v2-launcher-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 41, 59, 0.9);
+  color: #67e8f9;
+}
+
+.pcu-chat-v2-launcher-text {
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
 .pcu-champions-page {
   min-height: 100vh;
   background: radial-gradient(circle at top left, #10253f 0%, #061324 55%, #030a15 100%);
   color: #e2e8f0;
   padding: 1.25rem;
+}
+
+.pcu-champions-nav {
+  margin-bottom: 0.85rem;
+}
+
+.pcu-champions-back-link {
+  color: #67e8f9;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.pcu-champions-back-link:hover {
+  text-decoration: underline;
 }
 
 .pcu-champions-topbar {
@@ -1539,19 +1677,6 @@ body {
   line-height: 1;
 }
 
-.pcu-champions-footer {
-  margin-top: 1rem;
-}
-
-.pcu-champions-footer a {
-  color: #67e8f9;
-  text-decoration: none;
-}
-
-.pcu-champions-footer a:hover {
-  text-decoration: underline;
-}
-
 @media (max-width: 1024px) {
   .share-page {
     grid-template-columns: minmax(0, 1fr);
@@ -1565,5 +1690,14 @@ body {
   .pcu-champions-cards,
   .pcu-champions-content {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pcu-chat-v2-wrap {
+    right: 0.65rem;
+    bottom: 0.65rem;
+  }
+
+  .pcu-chat-v2-panel {
+    width: min(var(--pcu-chat-v2-width, 540px), calc(100vw - 1rem));
   }
 }

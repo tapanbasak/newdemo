@@ -191,6 +191,7 @@ export default function PromptDetailPage({
               trackActivity({ action: "run_prompt", agentId, promptId }).catch(() => undefined);
               const targetUrl = getRunPromptTargetUrl(prompt.platform);
               navigator.clipboard.writeText(prompt.prompt || prompt.description).then(() => {
+                trackActivity({ action: "copy_to_clipboard", agentId, promptId }).catch(() => undefined);
                 setShowCopiedMessage(true);
                 setTimeout(() => setShowCopiedMessage(false), 2500);
                 if (targetUrl) {
@@ -215,6 +216,7 @@ export default function PromptDetailPage({
             </button>
             <button type="button" className="action-btn" onClick={() => {
               navigator.clipboard.writeText(prompt.prompt || prompt.description).then(() => {
+                trackActivity({ action: "copy_to_clipboard", agentId, promptId }).catch(() => undefined);
                 setShowCopiedMessage(true);
                 setTimeout(() => setShowCopiedMessage(false), 2500);
               });

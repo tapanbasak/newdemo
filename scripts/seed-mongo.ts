@@ -53,6 +53,8 @@ async function createIndexes(db: Db): Promise<void> {
 
   await db.collection("activity_events").createIndex({ createdAt: -1 });
   await db.collection("activity_events").createIndex({ agentId: 1, action: 1, createdAt: -1 });
+  await db.collection("activity_events").createIndex({ promptId: 1, action: 1, createdAt: -1 });
+  await db.collection("activity_events").createIndex({ agentId: 1, promptId: 1, action: 1, createdAt: -1 });
   await db.collection("activity_events").createIndex({ userId: 1, createdAt: -1 });
 
   await db.collection("upvotes").createIndex(

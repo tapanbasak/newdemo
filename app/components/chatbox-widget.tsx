@@ -49,12 +49,12 @@ export default function ChatboxWidget() {
 
       {isOpen ? (
         <form className="pcu-chatbox-panel" onSubmit={submitMessage}>
-          <input
-            type="text"
+          <textarea
             className="pcu-chatbox-input"
             placeholder="ASK PROMPT CATCH UP"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
+            rows={2}
           />
           <button type="submit" className="pcu-chatbox-send" aria-label="Send chat message">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">

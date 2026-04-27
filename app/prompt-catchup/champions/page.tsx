@@ -1,84 +1,100 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import {
   LeaderboardProfileAvatar,
   PodiumProfileAvatar,
   PodiumSideIcon,
 } from "./profile-avatar";
 
-const TOP_CARDS = [
-  {
-    name: "Rick Lawton",
-    prompts: 27,
-    certified: 8,
-    upvotes: 349,
-    timeSaved: "41.0h",
-    rank: 1,
-    promptClass: "pcu-prompts--r1",
-    promptRest: "Prompt",
-  },
-  {
-    name: "Malvinder Kainth",
-    prompts: 25,
-    certified: 9,
-    upvotes: 284,
-    timeSaved: "28.5h",
-    rank: 2,
-    promptClass: "pcu-prompts--r2",
-    promptRest: "Prompt",
-  },
-  {
-    name: "Oswaldo Ortiz",
-    prompts: 24,
-    certified: 8,
-    upvotes: 198,
-    timeSaved: "22.0h",
-    rank: 3,
-    promptClass: "pcu-prompts--r3",
-    promptRest: "Prompt",
-  },
-] as const;
+type GamificationRow = {
+  rank: number;
+  name: string;
+  promptsShared: number;
+  certifiedPrompts: number;
+  totalUpvotes: number;
+  timeSavedHours: string;
+  score: number;
+};
 
-const LEADERBOARD = [
-  { rank: 4, name: "Reyaz Ahmed", score: 25 },
-  { rank: 5, name: "Steven Isaacs", score: 17 },
-  { rank: 6, name: "Kishore Pnr", score: 16 },
-  { rank: 7, name: "Elias Roy Yarlagadda", score: 16 },
-  { rank: 8, name: "Sivakumar Sekar", score: 16 },
-  { rank: 9, name: "Glemarys Pires", score: 16 },
-  { rank: 10, name: "Ambika Ng", score: 15 },
-  { rank: 11, name: "Sandeep Ravi", score: 14 },
-];
+type GamificationResponse = {
+  generatedAt: string;
+  totals: {
+    totalUsers: number;
+    certifiedPrompts: number;
+    totalPrompts: number;
+    timeSavedHours: string;
+  };
+  topCards: GamificationRow[];
+  leaderboard: GamificationRow[];
+};
 
 export default function ChampionsDashboardPage() {
+  const [data, setData] = useState<GamificationResponse | null>(null);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadGamification() {
+      setError("");
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/gamification", { cache: "no-store" });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.error || "Unable to load gamification stats.");
+        }
+        setData((await res.json()) as GamificationResponse);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Unable to load gamification stats.";
+        setError(message);
+        setData(null);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadGamification();
+  }, []);
+
+  const topCards = useMemo(() => data?.topCards ?? [], [data]);
+  const leaderboard = useMemo(() => (data?.leaderboard ?? []).slice(3), [data]);
+
   return (
     <div className="pcu-champions-page">
+      {error ? <div className="error-banner">{error}</div> : null}
+      <div className="pcu-champions-nav">
+        <Link href="/prompt-catchup" className="pcu-champions-back-link">
+          ← Back to Prompt Catch Up
+        </Link>
+      </div>
       <header className="pcu-champions-topbar">
         <div className="pcu-champions-metric">
           <span className="label">TOTAL USERS</span>
-          <span className="value">275</span>
+          <span className="value">{data?.totals.totalUsers ?? (isLoading ? "..." : 0)}</span>
         </div>
         <div className="pcu-champions-metric">
           <span className="label">CERTIFIED PROMPTS</span>
-          <span className="value">47</span>
+          <span className="value">{data?.totals.certifiedPrompts ?? (isLoading ? "..." : 0)}</span>
         </div>
         <div className="pcu-champions-metric">
           <span className="label">TIME SAVED</span>
-          <span className="value">126.5h</span>
+          <span className="value">{data?.totals.timeSavedHours ?? (isLoading ? "..." : "0.0h")}</span>
         </div>
         <div className="pcu-champions-metric">
           <span className="label">TOTAL PROMPTS</span>
-          <span className="value">1,842</span>
+          <span className="value">{data?.totals.totalPrompts ?? (isLoading ? "..." : 0)}</span>
         </div>
       </header>
 
       <div className="pcu-champions-content">
         <section className="pcu-champions-main">
           <h1>Prompt Engineering Gamification</h1>
-          <p className="pcu-champions-subtitle">As of 1/22/2026 at 5:01 PM</p>
+          <p className="pcu-champions-subtitle">
+            As of {data?.generatedAt ? new Date(data.generatedAt).toLocaleString() : "Loading..."}
+          </p>
           <div className="pcu-podium-wrap">
-            {TOP_CARDS.map((card) => (
+            {topCards.map((card) => (
               <article
                 key={card.name}
                 className={`pcu-champion-card pcu-rank-${card.rank}`}
@@ -105,15 +121,15 @@ export default function ChampionsDashboardPage() {
                 </div>
                 <div className="pcu-champion-titleline">
                   <h2 className="pcu-champion-name">{card.name}</h2>
-                  <p className={`pcu-prompts ${card.promptClass}`}>
-                    <strong>{card.prompts}</strong>
-                    <span className="pcu-prompts-label">{card.promptRest}</span>
+                  <p className={`pcu-prompts pcu-prompts--r${Math.min(card.rank, 3)}`}>
+                    <strong>{card.promptsShared}</strong>
+                    <span className="pcu-prompts-label">Prompt</span>
                   </p>
                 </div>
                 <ul>
-                  <li>Certified Prompts: {card.certified}</li>
-                  <li>Total Upvotes: {card.upvotes}</li>
-                  <li>Time Saved: {card.timeSaved}</li>
+                  <li>Certified Prompts: {card.certifiedPrompts}</li>
+                  <li>Total Upvotes: {card.totalUpvotes}</li>
+                  <li>Time Saved: {card.timeSavedHours}</li>
                 </ul>
               </article>
             ))}
@@ -123,7 +139,7 @@ export default function ChampionsDashboardPage() {
         <aside className="pcu-champions-board">
           <h3>Leaderboard</h3>
           <ul>
-            {LEADERBOARD.map((entry) => (
+            {leaderboard.map((entry) => (
               <li key={entry.rank}>
                 <span className="rank">{entry.rank}</span>
                 <LeaderboardProfileAvatar />
@@ -132,17 +148,13 @@ export default function ChampionsDashboardPage() {
                   <span className="pcu-lb-coin" aria-hidden="true">
                     🪙
                   </span>
-                  {entry.score}
+                  {entry.score.toFixed(2)}
                 </span>
               </li>
             ))}
           </ul>
         </aside>
       </div>
-
-      <footer className="pcu-champions-footer">
-        <Link href="/prompt-catchup">Back to Prompt Catch Up</Link>
-      </footer>
     </div>
   );
 }

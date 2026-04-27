@@ -300,6 +300,9 @@ export default function PromptCatchupPage() {
     }
     const targetUrl = getRunPromptTargetUrl(platform);
     navigator.clipboard.writeText(text).then(() => {
+      if (agentId && promptId) {
+        trackActivity({ action: "copy_to_clipboard", agentId, promptId }).catch(() => undefined);
+      }
       setShowCopiedMessage(true);
       setTimeout(() => setShowCopiedMessage(false), 2500);
       if (targetUrl) {

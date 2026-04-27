@@ -1,6 +1,10 @@
 import { getDb, hasMongo } from "@/lib/db";
 import { NextResponse } from "next/server";
 
+function normalizeIdentity(input: unknown) {
+  return String(input ?? "").trim().toLowerCase();
+}
+
 export async function POST(req: Request) {
   const body = (await req.json()) as {
     agentId: number;
@@ -10,7 +14,8 @@ export async function POST(req: Request) {
     description?: string;
     author?: string;
   };
-  if (!body.agentId || !body.promptId || !body.userId) {
+  const normalizedUserId = normalizeIdentity(body.userId);
+  if (!body.agentId || !body.promptId || !normalizedUserId) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -22,9 +27,9 @@ export async function POST(req: Request) {
   const exists = await db!.collection("upvotes").findOne({
     agentId: body.agentId,
     promptId: body.promptId,
-    userId: body.userId,
+    userId: normalizedUserId,
   });
   if (exists) return NextResponse.json({ ok: true, alreadyUpvoted: true });
-  await db!.collection("upvotes").insertOne({ ...body, createdAt: new Date() });
+  await db!.collection("upvotes").insertOne({ ...body, userId: normalizedUserId, createdAt: new Date() });
   return NextResponse.json({ ok: true, alreadyUpvoted: false });
 }

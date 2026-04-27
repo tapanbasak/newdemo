@@ -3,11 +3,13 @@
 import { SharedPrompt, StoredComment } from "@/lib/types";
 
 export function getUserId() {
-  const key = "pcu_user_id";
-  let id = localStorage.getItem(key);
+  const soeid = String(localStorage.getItem("cone-soeid") ?? "").trim().toLowerCase();
+  if (soeid) return soeid;
+  const legacyKey = "pcu_user_id";
+  let id = localStorage.getItem(legacyKey);
   if (!id) {
     id = crypto.randomUUID();
-    localStorage.setItem(key, id);
+    localStorage.setItem(legacyKey, id);
   }
   return id;
 }
@@ -160,7 +162,7 @@ export async function addComment(payload: Omit<StoredComment, "id" | "timeAgo" |
 }
 
 export async function trackActivity(payload: {
-  action: "learn_more" | "run_prompt";
+  action: "learn_more" | "run_prompt" | "copy_to_clipboard";
   agentId: number;
   promptId?: number;
 }) {
