@@ -25,6 +25,7 @@ const USER_PROFILE_KEY = "cone-user-profile";
 const BUSINESS_ORG_BY_SOEID_KEY = "pcu_business_org_by_soeid";
 const USER_ROLE_KEY = "pcu_user_role";
 const FALLBACK_SOEID = "tb97406";
+const CERTIFY_LINK_ALLOWED_SOEIDS = new Set(["oo24666", "tb97406"]);
 
 function normalizeGroups(input: Group[]): Group[] {
   const mapped = input.map((g) =>
@@ -75,6 +76,7 @@ export default function PromptCatchupPage() {
   const [loadError, setLoadError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserRole, setCurrentUserRole] = useState<string>(CURRENT_USER_ROLE);
+  const [currentUserSoeid, setCurrentUserSoeid] = useState<string>("");
 
   const applyStoredUserRole = () => {
     const fromStorage = localStorage.getItem("pcu_user_role");
@@ -89,6 +91,8 @@ export default function PromptCatchupPage() {
   const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
   useIsoLayoutEffect(() => {
     applyStoredUserRole();
+    const soeid = String(localStorage.getItem(USER_SOEID_KEY) ?? "").trim().toLowerCase() || FALLBACK_SOEID;
+    setCurrentUserSoeid(soeid);
   }, []);
 
   async function loadHomeData() {
@@ -390,6 +394,7 @@ export default function PromptCatchupPage() {
               </div>
               <div className="pcu-sidebar-links">
                 {sidebarLinks.map((link) => (
+                  link.href === "/prompt-catchup/certify" && !CERTIFY_LINK_ALLOWED_SOEIDS.has(currentUserSoeid) ? null :
                   link.href ? (
                     <Link key={link.label} href={link.href} className="pcu-sidebar-link">
                       {link.label}

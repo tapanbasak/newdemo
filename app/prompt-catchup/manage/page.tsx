@@ -10,6 +10,7 @@ import {
 
 const USER_SOEID_KEY = "cone-soeid";
 const FALLBACK_SOEID = "tb97406";
+const CERTIFY_LINK_ALLOWED_SOEIDS = new Set(["oo24666", "tb97406"]);
 
 export default function ManagePromptsPage() {
   const [items, setItems] = useState<ManagedSharedPrompt[]>([]);
@@ -25,6 +26,7 @@ export default function ManagePromptsPage() {
     localStorage.setItem(USER_SOEID_KEY, resolved);
     return resolved;
   }, []);
+  const canViewCertifyLink = CERTIFY_LINK_ALLOWED_SOEIDS.has(soeid);
 
   async function loadMine() {
     setLoadError("");
@@ -80,6 +82,11 @@ export default function ManagePromptsPage() {
             <Link href="/prompt-catchup/manage" className="sidebar-link active">
               Manage your Prompts
             </Link>
+            {canViewCertifyLink ? (
+              <Link href="/prompt-catchup/certify" className="sidebar-link">
+                Certify Prompt
+              </Link>
+            ) : null}
             <Link href="/prompt-catchup" className="sidebar-link">
               Home
             </Link>

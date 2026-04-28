@@ -23,6 +23,7 @@ const USER_PROFILE_KEY = "cone-user-profile";
 const BUSINESS_ORG_BY_SOEID_KEY = "pcu_business_org_by_soeid";
 const DEMO_SOEID = "demo.soeid";
 const DEMO_BUSINESS_ORG = "U. S Personal Banking";
+const CERTIFY_LINK_ALLOWED_SOEIDS = new Set(["oo24666", "tb97406"]);
 
 function normalizeRoleValue(input: string) {
   return String(input)
@@ -56,6 +57,11 @@ export default function SharePromptPage() {
   const [createdBySoeid, setCreatedBySoeid] = useState("");
   const [preferredRoleValue, setPreferredRoleValue] = useState("");
   const [preferredRoleLabel, setPreferredRoleLabel] = useState("");
+  const canViewCertifyLink = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    const soeid = String(localStorage.getItem(USER_SOEID_KEY) ?? "").trim().toLowerCase();
+    return CERTIFY_LINK_ALLOWED_SOEIDS.has(soeid);
+  }, []);
   const audienceGroups = useMemo(
     () => groups.filter((g) => g.slug !== "my-upvotes" && g.slug !== "roles" && g.slug !== "role"),
     [groups]
@@ -347,6 +353,11 @@ export default function SharePromptPage() {
             <Link href="/prompt-catchup/manage" className="sidebar-link">
               Manage your Prompts
             </Link>
+            {canViewCertifyLink ? (
+              <Link href="/prompt-catchup/certify" className="sidebar-link">
+                Certify Prompt
+              </Link>
+            ) : null}
             <Link href="/prompt-catchup" className="sidebar-link">
               Home
             </Link>

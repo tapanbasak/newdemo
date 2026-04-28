@@ -82,6 +82,13 @@ export async function fetchSharedPrompts() {
 }
 
 export type ManagedSharedPrompt = SharedPrompt & { id: string; createdAt?: string; updatedAt?: string };
+export type CertifyPromptRow = {
+  id: string;
+  title: string;
+  authorName: string;
+  authorSoeid: string;
+  certified: boolean;
+};
 
 export async function fetchMySharedPrompts(soeid: string) {
   const res = await fetch(
@@ -143,6 +150,52 @@ export async function deleteMySharedPrompt(id: string, soeid: string) {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data?.error || "Unable to delete your prompt.");
+  }
+  return res.json();
+}
+
+export async function fetchCertifyPrompts(soeid: string, page: number, pageSize: number) {
+  const res = await fetch(
+    `/api/admin/certify-prompts?soeid=${encodeURIComponent(
+      String(soeid).trim().toLowerCase()
+    )}&page=${encodeURIComponent(String(page))}&pageSize=${encodeURIComponent(String(pageSize))}`
+  );
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Unable to load prompts for certification.");
+  }
+  return (await res.json()) as {
+    items: CertifyPromptRow[];
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export async function certifyPromptByAdmin(id: string, soeid: string, certified = true) {
+  const res = await fetch("/api/admin/certify-prompts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, certified, soeid: String(soeid).trim().toLowerCase() }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Unable to certify prompt.");
+  }
+  return res.json();
+}
+
+export async function deletePromptByAdmin(id: string, soeid: string) {
+  const res = await fetch(
+    `/api/admin/certify-prompts/${encodeURIComponent(id)}?soeid=${encodeURIComponent(
+      String(soeid).trim().toLowerCase()
+    )}`,
+    { method: "DELETE" }
+  );
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Unable to delete prompt.");
   }
   return res.json();
 }

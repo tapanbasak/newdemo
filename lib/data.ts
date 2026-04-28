@@ -12,6 +12,7 @@ export const GROUPS: Group[] = [
 export const SIDEBAR_LINKS: Array<{ label: string; href?: string }> = [
   { label: "Share your Prompt", href: "/prompt-catchup/share" },
   { label: "Manage your Prompts", href: "/prompt-catchup/manage" },
+  { label: "Certify Prompt", href: "/prompt-catchup/certify" },
   { label: "Add your Assistant" },
   { label: "About" },
   { label: "FAQ" },
