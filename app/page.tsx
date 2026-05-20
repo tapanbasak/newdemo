@@ -26,6 +26,14 @@ export default function HomePage() {
                 Submit and manage application configuration scoped by environment, country, business, channel, and optional application ID.
               </p>
             </Link>
+            <Link href="/app-rule-config-v2" className="service-card" style={{ textDecoration: "none", color: "inherit" }}>
+              <div className="service-card-header">
+                <h3>App Rule Service Config (v2 — tabular)</h3>
+              </div>
+              <p className="service-card-body">
+                Tabular view of file configurations with last-updated metadata, inline view/edit/delete, and slide-in audit history.
+              </p>
+            </Link>
             <Link href="/psg" className="service-card" style={{ textDecoration: "none", color: "inherit" }}>
               <div className="service-card-header">
                 <h3>PSG Domain Whitelisting</h3>
