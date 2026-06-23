@@ -10,6 +10,7 @@ export type GamificationAuthorRow = {
   rank: number;
   soeid: string;
   name: string;
+  role: string;
   promptsShared: number;
   certifiedPrompts: number;
   totalUpvotes: number;
@@ -48,6 +49,16 @@ function displayName(input: unknown, fallback: string): string {
   return fallback || "Unknown";
 }
 
+/** Turn a role tag like "software-engineer" into a label like "Software Engineer". */
+function roleLabelFromTag(tag: unknown): string {
+  return String(tag ?? "")
+    .trim()
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export async function ensureGamificationIndexes(db: Db) {
   await db.collection("activity_events").createIndex({ promptId: 1, action: 1, createdAt: -1 });
   await db.collection("activity_events").createIndex({ agentId: 1, promptId: 1, action: 1, createdAt: -1 });
@@ -71,7 +82,7 @@ export async function buildGamificationPayload(
   const [sharedPrompts, prompts, upvotes, events] = await Promise.all([
     db
       .collection("shared_prompts")
-      .find({}, { projection: { _id: 0, createdBySoeid: 1, createdBy: 1 } })
+      .find({}, { projection: { _id: 0, createdBySoeid: 1, createdBy: 1, role: 1, roleTags: 1 } })
       .toArray(),
     db
       .collection("prompts")
@@ -130,10 +141,38 @@ export async function buildGamificationPayload(
   }
 
   const promptsSharedByAuthor = new Map<string, number>();
+  // Tally role tags per author so the card subtitle reflects their most common role.
+  const roleTagCountsByAuthor = new Map<string, Map<string, number>>();
   for (const row of sharedPrompts) {
-    const soeid = normalizeSoeid((row as Record<string, unknown>).createdBySoeid);
+    const record = row as Record<string, unknown>;
+    const soeid = normalizeSoeid(record.createdBySoeid);
     if (!soeid) continue;
     promptsSharedByAuthor.set(soeid, (promptsSharedByAuthor.get(soeid) ?? 0) + 1);
+
+    const tags = Array.isArray(record.roleTags) && record.roleTags.length
+      ? (record.roleTags as unknown[])
+      : [record.role];
+    const counts = roleTagCountsByAuthor.get(soeid) ?? new Map<string, number>();
+    for (const rawTag of tags) {
+      const tag = String(rawTag ?? "").trim().toLowerCase();
+      if (!tag) continue;
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+    roleTagCountsByAuthor.set(soeid, counts);
+  }
+
+  function roleForAuthor(soeid: string): string {
+    const counts = roleTagCountsByAuthor.get(soeid);
+    if (!counts || counts.size === 0) return "Contributor";
+    let topTag = "";
+    let topCount = -1;
+    for (const [tag, count] of counts.entries()) {
+      if (count > topCount || (count === topCount && tag.localeCompare(topTag) < 0)) {
+        topTag = tag;
+        topCount = count;
+      }
+    }
+    return roleLabelFromTag(topTag) || "Contributor";
   }
 
   const certifiedByAuthor = new Map<string, number>();
@@ -186,6 +225,7 @@ export async function buildGamificationPayload(
       rank: 0,
       soeid,
       name: meta.name,
+      role: roleForAuthor(soeid),
       promptsShared,
       certifiedPrompts,
       totalUpvotes,

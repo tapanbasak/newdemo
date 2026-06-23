@@ -1701,3 +1701,332 @@ body {
     width: min(var(--pcu-chat-v2-width, 540px), calc(100vw - 1rem));
   }
 }
+
+/* ============================================================
+   Prompt Engineering Leaders — redesigned dashboard (/prompt-catchup/leaders).
+   Namespaced under .pcu-ldr-* so it never collides with the legacy
+   .pcu-champions-* styles used by /prompt-catchup/champions.
+   ============================================================ */
+.pcu-ldr-page {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #11151d 0%, #0a0d13 55%, #05070b 100%);
+  color: #e2e8f0;
+  padding: 1.5rem;
+}
+
+.pcu-ldr-nav {
+  margin-bottom: 0.85rem;
+}
+
+.pcu-ldr-back-link {
+  color: #cbd5e1;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.92rem;
+}
+
+.pcu-ldr-back-link:hover {
+  text-decoration: underline;
+}
+
+.pcu-ldr-topbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.5rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(20, 24, 33, 0.85);
+}
+
+.pcu-ldr-metric {
+  padding: 0.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pcu-ldr-metric + .pcu-ldr-metric {
+  border-left: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.pcu-ldr-metric .label {
+  font-size: 0.92rem;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.pcu-ldr-metric .value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1;
+}
+
+.pcu-ldr-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1rem;
+  align-items: start;
+}
+
+.pcu-ldr-main {
+  padding: 0;
+}
+
+.pcu-ldr-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 0.4rem;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.pcu-ldr-heading-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.pcu-ldr-subtitle {
+  margin: 0 0 1.5rem;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.pcu-ldr-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+  align-items: end;
+}
+
+.pcu-ldr-card {
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: #1c2129;
+  padding: 1.5rem 1.25rem 0;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/*
+ * Podium card height: tallest -> medium -> short; bottoms align (align-items: end).
+ * Values sit above the natural content height (~420px) so the descending
+ * staircase is always visible; the extra space falls between the stats and
+ * the rank footer (which is pinned to the bottom via margin-top: auto).
+ */
+.pcu-ldr-rank-1 {
+  min-height: 520px;
+}
+
+.pcu-ldr-rank-2 {
+  min-height: 475px;
+}
+
+.pcu-ldr-rank-3 {
+  min-height: 430px;
+}
+
+.pcu-ldr-corner-icon {
+  position: absolute;
+  top: 0.85rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.25rem;
+  opacity: 0.9;
+}
+
+.pcu-ldr-avatar-stack {
+  display: flex;
+  justify-content: center;
+  margin: 1.6rem auto 0.85rem;
+}
+
+.pcu-ldr-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #fff;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.pcu-ldr-name {
+  margin: 0 0 0.15rem;
+  font-weight: 700;
+  font-size: 1.35rem;
+  color: #f8fafc;
+  line-height: 1.15;
+}
+
+.pcu-ldr-role {
+  margin: 0 0 0.9rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.pcu-ldr-pill {
+  display: inline-block;
+  padding: 0.32rem 0.95rem;
+  border-radius: 999px;
+  background: rgba(180, 130, 70, 0.22);
+  border: 1px solid rgba(202, 158, 92, 0.45);
+  color: #e7c9a0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 1.1rem;
+}
+
+.pcu-ldr-stats {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 1.1rem 0 0;
+  width: 100%;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.pcu-ldr-stats li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.pcu-ldr-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #cbd5e1;
+}
+
+.pcu-ldr-stat-label svg {
+  color: #94a3b8;
+}
+
+.pcu-ldr-stat-value {
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+/* Coloured rank footer pinned to the bottom of each card. */
+.pcu-ldr-footer {
+  margin-top: auto;
+  margin-left: -1.25rem;
+  margin-right: -1.25rem;
+  /* The card is a column flex with align-items: center, which would shrink
+     this item to its content width. align-self: stretch forces it back to
+     full width so the negative margins bleed it edge-to-edge as a band. */
+  align-self: stretch;
+  padding: 0.75rem 0;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.pcu-ldr-footer--r1 {
+  background: #f0b429;
+  color: #3b2f0a;
+}
+
+.pcu-ldr-footer--r2 {
+  background: #7cc4f0;
+  color: #0c2a3d;
+}
+
+.pcu-ldr-footer--r3 {
+  background: #d65a4a;
+}
+
+.pcu-ldr-board {
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  background: linear-gradient(180deg, rgba(18, 35, 64, 0.95), rgba(13, 26, 48, 0.95));
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+  align-self: start;
+}
+
+.pcu-ldr-board h3 {
+  margin: 0 0 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.8rem;
+  color: #67e8f9;
+}
+
+.pcu-ldr-board ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pcu-ldr-board li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.55rem 0;
+}
+
+.pcu-ldr-board li + li {
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.pcu-ldr-board .rank {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #bfdbfe;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1.5px solid #3b82f6;
+}
+
+.pcu-ldr-board .name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  color: #e2e8f0;
+  font-size: 0.86rem;
+  min-width: 0;
+}
+
+.pcu-ldr-board .name-first {
+  font-weight: 600;
+}
+
+.pcu-ldr-board .name-rest {
+  color: #cbd5e1;
+}
+
+.pcu-ldr-board .score {
+  text-align: right;
+  color: #f0b429;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 1024px) {
+  .pcu-ldr-topbar,
+  .pcu-ldr-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
