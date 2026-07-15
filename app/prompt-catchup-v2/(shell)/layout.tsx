@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { AppSidebar } from "./components/app-sidebar";
-import { BrowseProvider } from "./components/browse-context";
-import "./v2.css";
+import { AppSidebar } from "../components/app-sidebar";
+import { BrowseProvider } from "../components/browse-context";
+import "../v2.css";
 
 export const metadata = {
   title: "Prompt Hub",

@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import type { Agent, SortBy } from "@/lib/types";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import type { Agent, Group, SortBy } from "@/lib/types";
 import { CURRENT_USER_ROLE, type ViewMode } from "@/lib/view-meta";
 import { agentMatchesForMyRole, type PromptRoleHint } from "@/lib/for-my-role";
+import { agentNewestMillis, filterAgents, filterAgentsNoSort, sortAgentsBy } from "@/lib/filter";
 import { getMyUpvotes, getUpvoteCounts, trackActivity } from "@/lib/client-api";
 import { getRunPromptTargetUrl } from "@/lib/run-prompt";
-import { useBrowse } from "./components/browse-context";
+import { useBrowse } from "../components/browse-context";
 
 type MyUpvoteRow = {
   agentId?: number;
@@ -19,9 +20,42 @@ type MyUpvoteRow = {
   platform?: string;
 };
 
-const USER_ROLE_KEY = "pcu_user_role";
+/** Ported verbatim from v1: renames `agents` -> Assistants and synthesises the
+ *  zero-count `agent` group when the API omits it. */
+function normalizeGroups(input: Group[]): Group[] {
+  const mapped = input.map((g) => (g.slug === "agents" ? { ...g, name: "Assistants" } : g));
+  const hasAgentGroup = mapped.some((g) => g.slug === "agent");
+  if (!hasAgentGroup) {
+    const insertIndex = Math.max(
+      1,
+      mapped.findIndex((g) => g.slug !== "my-upvotes" && g.slug !== "agents")
+    );
+    const item: Group = { name: "Agent", slug: "agent", count: 0 };
+    if (insertIndex === -1) return [...mapped, item];
+    return [...mapped.slice(0, insertIndex), item, ...mapped.slice(insertIndex)];
+  }
+  return mapped;
+}
+
+/** Ported verbatim from v1: content-identity so the same prompt shared across
+ *  several assistants collapses into one row and sums its upvotes. */
+function getMyUpvoteDedupKey(row: MyUpvoteRow) {
+  return `${String(row.title ?? "")
+    .trim()
+    .toLowerCase()}|${String(row.description ?? "")
+    .trim()
+    .toLowerCase()}|${String(row.author ?? "")
+    .trim()
+    .toLowerCase()}|${String(row.platform ?? "")
+    .trim()
+    .toLowerCase()}`;
+}
+
 const USER_SOEID_KEY = "cone-soeid";
-const FALLBACK_SOEID = "tb97406"; // same default identity v1 uses for My Upvotes
+const USER_PROFILE_KEY = "cone-user-profile";
+const BUSINESS_ORG_BY_SOEID_KEY = "pcu_business_org_by_soeid";
+const USER_ROLE_KEY = "pcu_user_role";
+const FALLBACK_SOEID = "tb97406";
 
 /**
  * The Figma "Filter by Role" dropdown (role-tag list) is retained in code but
@@ -33,11 +67,6 @@ const SHOW_ROLE_FILTER = false;
 /** Shape returned by GET /api/home (see app/api/home/route.ts). */
 type ScoreboardRow = { ranking: string; name: string; value: string };
 type Scoreboard = { title: string; columns: string[]; rows: ScoreboardRow[]; footnote?: string };
-type HomeResponse = {
-  agents: Agent[];
-  scoreboards: Scoreboard[];
-  promptRolesByAgent?: Record<number, PromptRoleHint[]>;
-};
 
 /** Display config for the three home panels, in the API's [champions, recent, topVoted] order. */
 const PANELS = [
@@ -111,87 +140,232 @@ function firstLetter(name: string): string {
 }
 
 export default function PromptHubHome() {
-  const [data, setData] = useState<HomeResponse | null>(null);
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-
-  const { group, setGroup } = useBrowse();
+  const { group, setGroup, setGroups: publishGroups } = useBrowse();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("for_my_role");
   const [role, setRole] = useState("all"); // hidden role filter, retained for later
   const [sortBy, setSortBy] = useState<SortBy>("most_prompts");
-  const [currentUserRole, setCurrentUserRole] = useState<string>(CURRENT_USER_ROLE);
 
-  // My Likes (upvoted prompts) view state — mirrors v1's "My Upvotes" group.
+  const [myCount, setMyCount] = useState(0);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [scoreboards, setScoreboards] = useState<Scoreboard[]>([]);
+  const [promptRoles, setPromptRoles] = useState<Record<number, PromptRoleHint[]>>({});
   const [myUpvotes, setMyUpvotes] = useState<MyUpvoteRow[]>([]);
   const [upvoteCounts, setUpvoteCounts] = useState<Record<string, number>>({});
   const [promptSearch, setPromptSearch] = useState("");
   const [showCertifiedOnly, setShowCertifiedOnly] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentUserRole, setCurrentUserRole] = useState<string>(CURRENT_USER_ROLE);
 
-  // Reuse the role v1 resolved into localStorage (falls back to the default role).
-  useEffect(() => {
+  const applyStoredUserRole = () => {
+    const fromStorage = localStorage.getItem(USER_ROLE_KEY);
+    const normalized = String(fromStorage ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+    setCurrentUserRole(normalized || CURRENT_USER_ROLE);
+  };
+
+  const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+  useIsoLayoutEffect(() => {
+    applyStoredUserRole();
+  }, []);
+
+  async function loadHomeData() {
+    setError("");
+    setIsLoading(true);
     try {
-      const stored = localStorage.getItem(USER_ROLE_KEY);
-      if (stored && stored.trim()) setCurrentUserRole(stored.trim().toLowerCase());
+      const [mine, counts, homeData] = await Promise.all([
+        getMyUpvotes().catch(() => []),
+        getUpvoteCounts().catch(() => ({})),
+        fetch("/api/home").then(async (r) => {
+          if (!r.ok) {
+            const data = await r.json().catch(() => ({}));
+            throw new Error(data?.error || "Unable to load home data.");
+          }
+          return r.json();
+        }),
+      ]);
+      setUpvoteCounts(counts as Record<string, number>);
+      setMyCount(Array.from(new Set((mine as MyUpvoteRow[]).map((row) => getMyUpvoteDedupKey(row)))).length);
+      setMyUpvotes(mine as MyUpvoteRow[]);
+      setAgents(homeData.agents ?? []);
+      setGroups(normalizeGroups(homeData.groups ?? []));
+      setScoreboards(homeData.scoreboards ?? []);
+      setPromptRoles(homeData.promptRolesByAgent ?? {});
+      setIsLoading(false);
     } catch {
-      // ignore storage access issues
+      setAgents([]);
+      setGroups([]);
+      setScoreboards([]);
+      setUpvoteCounts({});
+      setPromptRoles({});
+      setError("Unable to load home data right now. Please check MongoDB connection and try again.");
+      setIsLoading(false);
     }
-  }, []);
+  }
 
-  // Load the current user's upvoted prompts + live counts (same endpoints as v1).
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        // Ensure an identity exists so /api/upvotes/mine matches (v1 parity).
-        try {
-          const existing = String(localStorage.getItem(USER_SOEID_KEY) ?? "").trim();
-          if (!existing) localStorage.setItem(USER_SOEID_KEY, FALLBACK_SOEID);
-        } catch {
-          // ignore storage access issues
-        }
-        const [mine, counts] = await Promise.all([
-          getMyUpvotes().catch(() => []),
-          getUpvoteCounts().catch(() => ({})),
-        ]);
-        if (cancelled) return;
-        setMyUpvotes(mine as MyUpvoteRow[]);
-        setUpvoteCounts(counts as Record<string, number>);
-      } catch {
-        // non-fatal; My Likes just shows empty
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    loadHomeData();
   }, []);
 
+  // Ported from v1: resolves the signed-in user's role + business org into
+  // localStorage. Without this v2 would depend on v1 having been visited first.
+  useEffect(() => {
+    async function loadAndStoreUserProfile() {
+      const soeid = String(localStorage.getItem(USER_SOEID_KEY) ?? "").trim().toLowerCase() || FALLBACK_SOEID;
+      localStorage.setItem(USER_SOEID_KEY, soeid);
+      try {
+        const profileRes = await fetch(`/api/user-profile?soeid=${encodeURIComponent(soeid)}`, { cache: "no-store" });
+        if (!profileRes.ok) return;
+        const data = (await profileRes.json()) as {
+          user?: {
+            soeId?: string;
+            firstName?: string;
+            lastName?: string;
+            departmentName?: string;
+            mappedRole?: { roleKey?: string; roleLabel?: string };
+          };
+        };
+        if (!data?.user) return;
+        localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(data.user));
+        const normalizedSoeid = String(data.user.soeId ?? soeid).trim().toLowerCase();
+        if (normalizedSoeid) localStorage.setItem(USER_SOEID_KEY, normalizedSoeid);
+        const mappedRoleKey = String(data.user.mappedRole?.roleKey ?? "").trim().toLowerCase();
+        if (mappedRoleKey) {
+          localStorage.setItem(USER_ROLE_KEY, mappedRoleKey);
+          setCurrentUserRole(mappedRoleKey);
+        }
+        const department = String(data.user.departmentName ?? "").trim();
+        if (department) {
+          const mappedBusinessOrg =
+            department.toUpperCase().includes("USPB") ? "U. S Personal Banking" : "";
+          if (mappedBusinessOrg) {
+            const raw = localStorage.getItem(BUSINESS_ORG_BY_SOEID_KEY);
+            const parsed = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+            parsed[normalizedSoeid || soeid] = mappedBusinessOrg;
+            localStorage.setItem(BUSINESS_ORG_BY_SOEID_KEY, JSON.stringify(parsed));
+          }
+        }
+      } catch {
+        // no-op for local dev/offline simulation failures
+      }
+    }
+    loadAndStoreUserProfile();
+  }, []);
+
+  // v1 refreshes usage counts when switching to "Most used".
+  useEffect(() => {
+    if (viewMode === "most_used") {
+      loadHomeData();
+    }
+  }, [viewMode]);
+
+  const roleOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of agents) for (const t of a.roleTags ?? []) if (t) set.add(t);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [agents]);
+
+  /** Ported verbatim from v1's filteredAgents. */
+  const visibleAgents = useMemo(() => {
+    const baseFiltered = filterAgentsNoSort(agents, "", "all", group);
+    const compareMostUsed = (a: Agent, b: Agent) => {
+      if (sortBy === "alphabetical") {
+        return a.name.localeCompare(b.name);
+      }
+      const uA = a.usageCount ?? 0;
+      const uB = b.usageCount ?? 0;
+      if (uB !== uA) return uB - uA;
+      switch (sortBy) {
+        case "newest":
+          return agentNewestMillis(b) - agentNewestMillis(a) || b.promptCount - a.promptCount;
+        default:
+          return b.promptCount - a.promptCount;
+      }
+    };
+
+    const globallySorted =
+      viewMode === "most_used" && sortBy !== "newest" && sortBy !== "alphabetical"
+        ? [...baseFiltered].sort(compareMostUsed)
+        : sortAgentsBy(baseFiltered, sortBy);
+
+    const q = search.toLowerCase().trim();
+    const searched = q ? globallySorted.filter((a) => a.name.toLowerCase().includes(q)) : globallySorted;
+    // Hidden role-tag filter (inert while role === "all"); retained for later use.
+    const roleFiltered =
+      role === "all" ? searched : searched.filter((a) => (a.roleTags ?? []).includes(role));
+
+    if (viewMode === "all_agents" || viewMode === "most_used") {
+      return roleFiltered;
+    }
+
+    if (viewMode === "for_my_role") {
+      if (sortBy === "newest" || sortBy === "alphabetical") {
+        return roleFiltered;
+      }
+      const matched: Agent[] = [];
+      const unmatched: Agent[] = [];
+      for (const agent of roleFiltered) {
+        if (agentMatchesForMyRole(agent, promptRoles, currentUserRole)) matched.push(agent);
+        else unmatched.push(agent);
+      }
+      return [...matched, ...unmatched];
+    }
+
+    return roleFiltered;
+  }, [agents, search, sortBy, group, promptRoles, viewMode, currentUserRole, role]);
+
+  /** Ported from v1: live per-group counts, re-filtered by the current search. */
+  const groupsWithCounts = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return groups.map((g) => {
+      if (g.slug === "my-upvotes") return { ...g, count: myCount };
+      let list = filterAgents(agents, "", "all", "most_prompts", g.slug);
+      if (q) {
+        list = list.filter((a) => a.name.toLowerCase().includes(q));
+      }
+      return { ...g, count: list.length };
+    });
+  }, [agents, groups, search, myCount]);
+
+  // Publish counts so the sidebar can disable zero-count groups like v1 does.
+  useEffect(() => {
+    publishGroups(groupsWithCounts);
+  }, [groupsWithCounts, publishGroups]);
+
+  /** Ported verbatim from v1's filteredMyUpvotes (content-identity dedup, no sort). */
   const myLikes = useMemo(() => {
     const deduped = new Map<
       string,
       { agentId: number; promptId: number; title: string; description: string; platform?: string; certified: boolean; upvotes: number; author: string }
     >();
     for (const row of myUpvotes) {
-      const aid = row.agentId ?? 0;
-      const pid = row.promptId ?? 0;
       const item = {
-        agentId: aid,
-        promptId: pid,
+        agentId: row.agentId ?? 0,
+        promptId: row.promptId ?? 0,
         title: row.title ?? "Unknown",
         description: row.description ?? "",
         platform: row.platform,
         certified: false,
-        upvotes: upvoteCounts[`${aid}_${pid}`] ?? row.upvotes ?? 0,
+        upvotes: upvoteCounts[`${row.agentId ?? 0}_${row.promptId ?? 0}`] ?? row.upvotes ?? 0,
         author: row.author ?? "",
       };
-      const key = `${aid}_${pid}`;
+      const key = getMyUpvoteDedupKey(item);
       const existing = deduped.get(key);
-      if (!existing) deduped.set(key, item);
-      else existing.upvotes += item.upvotes;
+      if (!existing) {
+        deduped.set(key, item);
+      } else {
+        existing.upvotes += item.upvotes;
+      }
     }
+
     let list = Array.from(deduped.values());
-    const q = promptSearch.trim().toLowerCase();
+    const q = promptSearch.toLowerCase().trim();
     if (q) {
       list = list.filter(
         (r) =>
@@ -200,10 +374,11 @@ export default function PromptHubHome() {
           r.author.toLowerCase().includes(q)
       );
     }
-    if (showCertifiedOnly) list = list.filter((r) => r.certified);
-    list.sort((a, b) => b.upvotes - a.upvotes);
+    if (showCertifiedOnly) {
+      list = list.filter((r) => r.certified);
+    }
     return list;
-  }, [myUpvotes, upvoteCounts, promptSearch, showCertifiedOnly]);
+  }, [promptSearch, myUpvotes, showCertifiedOnly, upvoteCounts]);
 
   function onRunPrompt(text: string, agentId?: number, promptId?: number, platform?: string) {
     if (!text) return;
@@ -218,83 +393,6 @@ export default function PromptHubHome() {
       if (targetUrl) window.open(targetUrl, "_blank", "noopener,noreferrer");
     });
   }
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setError("");
-      setIsLoading(true);
-      try {
-        const res = await fetch("/api/home", { cache: "no-store" });
-        if (!res.ok) throw new Error("Unable to load Prompt Hub data.");
-        const json = (await res.json()) as HomeResponse;
-        if (!cancelled) setData(json);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Unable to load Prompt Hub data.");
-          setData(null);
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const agents = useMemo(() => data?.agents ?? [], [data]);
-  const scoreboards = useMemo(() => data?.scoreboards ?? [], [data]);
-  const promptRoles = useMemo(() => data?.promptRolesByAgent ?? {}, [data]);
-
-  const roleOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const a of agents) for (const t of a.roleTags ?? []) if (t) set.add(t);
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [agents]);
-
-  const visibleAgents = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    // GUIDE group filter (v1 parity) + text search + the (hidden) role-tag filter.
-    let out = agents.filter((a) => {
-      const matchesGroup = !group || a.category === group;
-      const matchesText =
-        !q || a.name.toLowerCase().includes(q) || a.description.toLowerCase().includes(q);
-      const matchesRole = role === "all" || (a.roleTags ?? []).includes(role);
-      return matchesGroup && matchesText && matchesRole;
-    });
-
-    const bySort = (a: Agent, b: Agent) => {
-      if (sortBy === "alphabetical") return a.name.localeCompare(b.name);
-      if (sortBy === "newest") {
-        const bt = b.latestPromptAt ? Date.parse(b.latestPromptAt) : 0;
-        const at = a.latestPromptAt ? Date.parse(a.latestPromptAt) : 0;
-        return bt - at;
-      }
-      return b.promptCount - a.promptCount; // most_prompts
-    };
-
-    // "Most used" ranks by usage count first (unless an explicit sort overrides).
-    if (viewMode === "most_used" && sortBy !== "newest" && sortBy !== "alphabetical") {
-      out = [...out].sort((a, b) => (b.usageCount ?? 0) - (a.usageCount ?? 0) || bySort(a, b));
-    } else {
-      out = [...out].sort(bySort);
-    }
-
-    // "For my role" floats role-matched assistants to the top (v1 behaviour).
-    if (viewMode === "for_my_role" && sortBy !== "newest" && sortBy !== "alphabetical") {
-      const matched: Agent[] = [];
-      const unmatched: Agent[] = [];
-      for (const a of out) {
-        if (agentMatchesForMyRole(a, promptRoles, currentUserRole)) matched.push(a);
-        else unmatched.push(a);
-      }
-      out = [...matched, ...unmatched];
-    }
-
-    return out;
-  }, [agents, group, search, role, sortBy, viewMode, promptRoles, currentUserRole]);
 
   const filtersActive =
     group !== null ||
@@ -317,7 +415,14 @@ export default function PromptHubHome() {
         <p className="v2-hero-sub">The best prompt could come from anyone — including you.</p>
       </header>
 
-      {error ? <div className="v2-error">{error}</div> : null}
+      {error ? (
+        <div className="v2-error">
+          {error}{" "}
+          <button type="button" className="v2-retry" onClick={loadHomeData}>
+            Retry
+          </button>
+        </div>
+      ) : null}
 
       <section className="v2-panels">
         {PANELS.map((panel, i) => {
@@ -355,9 +460,9 @@ export default function PromptHubHome() {
               </ul>
               {panel.viewAll ? (
                 <div className="v2-panel-footer">
-                  <span className="v2-view-all" role="link" tabIndex={0}>
+                  <Link className="v2-view-all" href="/prompt-catchup-v2/leaders">
                     {panel.viewAll} <Arrow />
-                  </span>
+                  </Link>
                 </div>
               ) : null}
               {board?.footnote ? <p className="v2-panel-note">{board.footnote}</p> : null}
@@ -516,7 +621,13 @@ export default function PromptHubHome() {
                   <span className="v2-card-count">
                     {agent.promptCount} {agent.promptCount === 1 ? "prompt" : "prompts"}
                   </span>
-                  <Link className="v2-card-link" href={`/prompt-catchup/catalog/${agent.id}`}>
+                  <Link
+                    className="v2-card-link"
+                    href={`/prompt-catchup-v2/catalog/${agent.id}`}
+                    onClick={() =>
+                      trackActivity({ action: "learn_more", agentId: agent.id }).catch(() => undefined)
+                    }
+                  >
                     {hasPrompts ? "View Prompts" : "Be the First to Share"} <Arrow />
                   </Link>
                 </div>
