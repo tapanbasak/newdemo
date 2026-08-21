@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enterprise API Security Architecture - Akamai → Apigee → PSG → Downstream</title>
+<style>
+  :root {
+    --navy: #17324d;
+    --blue: #1f6feb;
+    --blue-light: #eaf3ff;
+    --green: #16835b;
+    --green-light: #eaf8f2;
+    --purple: #7048b8;
+    --purple-light: #f3edff;
+    --orange: #c56a18;
+    --orange-light: #fff4e8;
+    --gray: #5f6b76;
+    --gray-light: #f5f7f9;
+    --border: #cfd8e3;
+    --text: #1f2933;
+    --danger: #a33a3a;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: var(--text);
+    background: #f2f5f8;
+    line-height: 1.55;
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px;
+  }
+
+  header {
+    background: linear-gradient(135deg, #17324d, #245d87);
+    color: white;
+    padding: 36px 42px;
+    border-radius: 16px;
+    margin-bottom: 28px;
+    box-shadow: 0 8px 24px rgba(23,50,77,.15);
+  }
+
+  header h1 {
+    margin: 0 0 8px;
+    font-size: 32px;
+  }
+
+  header p {
+    margin: 0;
+    font-size: 17px;
+    opacity: .92;
+  }
+
+  .architecture-banner {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 28px;
+  }
+
+  .architecture-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .arch-node {
+    padding: 14px 22px;
+    border-radius: 10px;
+    font-weight: 700;
+    text-align: center;
+    min-width: 155px;
+    border: 2px solid;
+  }
+
+  .consumer { background: #f4f5f7; border-color: #87919b; }
+  .akamai { background: var(--orange-light); border-color: var(--orange); }
+  .apigee { background: var(--blue-light); border-color: var(--blue); }
+  .psg { background: var(--green-light); border-color: var(--green); }
+  .downstream { background: var(--purple-light); border-color: var(--purple); }
+
+  .arrow {
+    font-size: 26px;
+    color: #64748b;
+    font-weight: bold;
+  }
+
+  h2 {
+    color: var(--navy);
+    margin-top: 38px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #dbe3ec;
+  }
+
+  h3 {
+    color: var(--navy);
+    margin-top: 24px;
+  }
+
+  .principles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  .principle {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+
+  .principle strong {
+    display: block;
+    color: var(--navy);
+    margin-bottom: 5px;
+  }
+
+  .layer {
+    background: white;
+    border: 1px solid var(--border);
+    border-left: 6px solid;
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px 0;
+    box-shadow: 0 3px 10px rgba(30,45,60,.05);
+  }
+
+  .layer.akamai-layer { border-left-color: var(--orange); }
+  .layer.apigee-layer { border-left-color: var(--blue); }
+  .layer.psg-layer { border-left-color: var(--green); }
+  .layer.service-layer { border-left-color: var(--purple); }
+
+  .layer-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: #edf1f5;
+    color: #46515d;
+  }
+
+  ul { padding-left: 22px; }
+
+  .flow-section {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 26px;
+    margin: 26px 0;
+  }
+
+  .flow-step {
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    gap: 15px;
+    margin: 18px 0;
+  }
+
+  .step-number {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+
+  .step-content {
+    border-bottom: 1px solid #e5e9ee;
+    padding-bottom: 16px;
+  }
+
+  .step-content h4 {
+    margin: 0 0 5px;
+    color: var(--navy);
+  }
+
+  code {
+    background: #f1f4f7;
+    border: 1px solid #e0e5ea;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  pre {
+    background: #17212b;
+    color: #e9eef4;
+    padding: 20px;
+    border-radius: 10px;
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+
+  .token-table, table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0;
+    background: white;
+  }
+
+  th, td {
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: #edf2f7;
+    color: var(--navy);
+  }
+
+  .note {
+    background: #fff9e8;
+    border-left: 5px solid #d7a321;
+    padding: 15px 18px;
+    margin: 18px 0;
+    border-radius: 6px;
+  }
+
+  .interview {
+    background: #eef7ff;
+    border: 1px solid #bddcff;
+    border-radius: 12px;
+    padding: 22px;
+    margin: 20px 0;
+  }
+
+  .quote {
+    background: #f6f8fa;
+    border-left: 5px solid var(--blue);
+    padding: 18px 20px;
+    margin: 15px 0;
+    font-style: italic;
+  }
+
+  .mental-model {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    margin: 22px 0;
+  }
+
+  .mental-model div {
+    padding: 16px 10px;
+    text-align: center;
+    border: 1px solid white;
+    font-size: 14px;
+  }
+
+  .mental-model strong {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 6px;
+  }
+
+  .small {
+    color: var(--gray);
+    font-size: 13px;
+  }
+
+  footer {
+    margin-top: 36px;
+    padding: 20px;
+    text-align: center;
+    color: var(--gray);
+    font-size: 13px;
+  }
+
+  @media (max-width: 900px) {
+    .mental-model { grid-template-columns: 1fr; }
+    .architecture-flow { flex-direction: column; }
+    .arrow { transform: rotate(90deg); }
+  }
+
+  @media print {
+    body { background: white; }
+    .container { max-width: none; padding: 15px; }
+    header { box-shadow: none; }
+    .layer, .flow-section { break-inside: avoid; }
+  }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+  <h1>Enterprise API Security Architecture</h1>
+  <p>Akamai → Apigee → PSG → Downstream Services</p>
+</header>
+
+<section class="architecture-banner">
+  <h2 style="margin-top:0;border:0;">1. Overall Architecture</h2>
+  <div class="architecture-flow">
+    <div class="arch-node consumer">External Consumer</div>
+    <div class="arrow">→</div>
+    <div class="arch-node akamai">Akamai<br><small>Edge Security</small></div>
+    <div class="arrow">→</div>
+    <div class="arch-node apigee">Apigee<br><small>API Gateway</small></div>
+    <div class="arrow">→</div>
+    <div class="arch-node psg">PSG<br><small>Platform Security</small></div>
+    <div class="arrow">→</div>
+    <div class="arch-node downstream">Downstream Services<br><small>Business Logic</small></div>
+  </div>
+</section>
+
+<h2>2. Architectural Mental Model</h2>
+
+<div class="principles">
+  <div class="principle">
+    <strong>Defense in Depth</strong>
+    Multiple independent security boundaries protect the request.
+  </div>
+  <div class="principle">
+    <strong>Separation of Concerns</strong>
+    Edge, API, identity, service authorization and business logic have distinct responsibilities.
+  </div>
+  <div class="principle">
+    <strong>Progressive Trust</strong>
+    The request becomes increasingly trusted as it passes through each security layer.
+  </div>
+  <div class="principle">
+    <strong>Least Privilege</strong>
+    Each layer validates only the security concerns it is responsible for.
+  </div>
+</div>
+
+<div class="mental-model">
+  <div class="akamai">
+    <strong>Akamai</strong>
+    Can this traffic safely enter?
+  </div>
+  <div class="apigee">
+    <strong>Apigee</strong>
+    Is this a valid API request?
+  </div>
+  <div class="psg">
+    <strong>PSG</strong>
+    Can I trust this security context?
+  </div>
+  <div class="downstream">
+    <strong>Service Token</strong>
+    What identity/context reaches the service?
+  </div>
+  <div style="background:#f4f5f7;">
+    <strong>Microservice</strong>
+    Can this identity perform this operation?
+  </div>
+</div>
+
+<h2>3. Layer Responsibilities</h2>
+
+<div class="layer akamai-layer">
+  <div class="layer-title">
+    <h3 style="margin:0;">Layer 1 — Akamai</h3>
+    <span class="badge">Edge / Perimeter Security</span>
+  </div>
+  <p>Akamai acts as the internet-facing edge/security layer. External consumers do not directly access the internal API platform.</p>
+  <strong>Typical capabilities, depending on enterprise configuration:</strong>
+  <ul>
+    <li>Web Application Firewall (WAF)</li>
+    <li>DDoS protection</li>
+    <li>Bot and automated-traffic protection</li>
+    <li>IP filtering and traffic controls</li>
+    <li>TLS/SSL handling</li>
+    <li>Routing and edge-level policies</li>
+    <li>Request/header manipulation</li>
+    <li>Geographic or other edge restrictions</li>
+  </ul>
+  <p><strong>Architectural question:</strong> "Should this traffic be allowed to enter our API ecosystem?"</p>
+</div>
+
+<div class="layer apigee-layer">
+  <div class="layer-title">
+    <h3 style="margin:0;">Layer 2 — Apigee</h3>
+    <span class="badge">API Gateway / API Management</span>
+  </div>
+  <p>Apigee provides the API gateway boundary and applies API-level policies before forwarding the request to PSG.</p>
+  <ul>
+    <li>Client identification/validation</li>
+    <li>API-level policy enforcement</li>
+    <li>Quota and rate-limit controls</li>
+    <li>Request validation</li>
+    <li>OAuth/token-related processing</li>
+    <li>Routing to the appropriate backend/security layer</li>
+  </ul>
+  <p><strong>Architectural question:</strong> "Is this a valid API consumer/request and is it within API-level policies?"</p>
+</div>
+
+<div class="layer psg-layer">
+  <div class="layer-title">
+    <h3 style="margin:0;">Layer 3 — PSG (Platform Security Layer)</h3>
+    <span class="badge">Enterprise Security / Identity / Authorization</span>
+  </div>
+  <p>PSG provides enterprise-level security orchestration and establishes the trusted identity/security context used by downstream services.</p>
+  <ul>
+    <li>Authentication orchestration for login flows</li>
+    <li>Interaction with SSO/CCS/login services</li>
+    <li>Interaction with the authorization service</li>
+    <li>Access-token/JWT validation</li>
+    <li>Extraction of identity, role and other claims</li>
+    <li>Enterprise security policy enforcement</li>
+    <li>Generation of service authorization token</li>
+  </ul>
+  <p><strong>Architectural question:</strong> "Can I trust this identity and security context?"</p>
+</div>
+
+<div class="layer service-layer">
+  <div class="layer-title">
+    <h3 style="margin:0;">Layer 4 — Downstream Services</h3>
+    <span class="badge">Service Authorization / Business Logic</span>
+  </div>
+  <p>Downstream microservices validate the service authorization context and enforce service-specific authorization before executing business logic.</p>
+  <ul>
+    <li>Service-token validation</li>
+    <li>Signature/claim validation</li>
+    <li>Role and permission checks</li>
+    <li>API/endpoint authorization</li>
+    <li>Business-level authorization</li>
+    <li>Business processing</li>
+  </ul>
+  <p><strong>Architectural question:</strong> "Is this identity allowed to perform this particular operation?"</p>
+</div>
+
+<h2>4. Pre-login / Login Flow</h2>
+
+<div class="flow-section">
+  <div class="flow-step">
+    <div class="step-number">1</div>
+    <div class="step-content">
+      <h4>Consumer sends login request</h4>
+      <p>The external consumer invokes the login/pre-login API. At this point the user has not yet established an authenticated security context.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">2</div>
+    <div class="step-content">
+      <h4>Akamai receives the request</h4>
+      <p>Akamai applies the applicable edge security controls such as WAF and DDoS/traffic protection, then routes the request toward the API gateway.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">3</div>
+    <div class="step-content">
+      <h4>Apigee validates the API request</h4>
+      <p>Apigee performs applicable client/API validation, quota/rate-limit checks and API policies, then forwards the login request to PSG.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">4</div>
+    <div class="step-content">
+      <h4>PSG orchestrates authentication</h4>
+      <p>PSG invokes the appropriate authentication service, such as SSO, CCS or another login service, to authenticate the user.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">5</div>
+    <div class="step-content">
+      <h4>Authorization service establishes token context</h4>
+      <p>After successful authentication, PSG communicates with the authorization service. Based on the current understanding, this results in a CAT and an internal JWT access token.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">6</div>
+    <div class="step-content">
+      <h4>PSG returns token information to Apigee</h4>
+      <p>The CAT and internal access token are returned through the security flow to Apigee.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">7</div>
+    <div class="step-content">
+      <h4>CAT-to-access-token mapping is maintained</h4>
+      <p>In the current understanding of the enterprise implementation, Apigee maintains a CAT-to-access-token mapping in Cassandra for subsequent API requests.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">8</div>
+    <div class="step-content">
+      <h4>CAT is returned to the consumer</h4>
+      <p>The consumer receives the CAT. The internal access token is not exposed as the consumer-facing credential in this flow.</p>
+    </div>
+  </div>
+</div>
+
+<pre>
+Consumer
+   |
+   | Login Request
+   v
+Akamai
+   |
+   v
+Apigee
+   |
+   v
+PSG
+   |
+   +----> SSO / CCS / Login Service
+   |
+   +----> Authorization Service
+              |
+              +----> CAT
+              |
+              +----> Access Token (JWT)
+   |
+   v
+Apigee
+   |
+   +----> Cassandra
+   |       CAT <-> Access Token
+   |
+   v
+Consumer receives CAT
+</pre>
+
+<h2>5. Post-login API Flow</h2>
+
+<div class="flow-section">
+  <div class="flow-step">
+    <div class="step-number">1</div>
+    <div class="step-content">
+      <h4>Consumer sends authenticated API request</h4>
+      <p>The consumer sends the API request with the CAT in the applicable request header.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">2</div>
+    <div class="step-content">
+      <h4>Akamai applies edge security</h4>
+      <p>The request passes through the same internet-facing security boundary before reaching Apigee.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">3</div>
+    <div class="step-content">
+      <h4>Apigee validates API-level controls</h4>
+      <p>Apigee validates the client/API context and applies quota, rate-limit and other API policies.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">4</div>
+    <div class="step-content">
+      <h4>Apigee resolves the CAT</h4>
+      <p>Apigee uses the CAT-to-access-token mapping to obtain the corresponding internal access token.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">5</div>
+    <div class="step-content">
+      <h4>Apigee sends access token to PSG</h4>
+      <p>PSG receives the internal JWT access token rather than relying on the external CAT for downstream processing.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">6</div>
+    <div class="step-content">
+      <h4>PSG validates access token</h4>
+      <p>PSG validates the JWT according to the enterprise security implementation. Typical JWT checks can include signature, issuer, audience, expiration and required claims.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">7</div>
+    <div class="step-content">
+      <h4>PSG extracts security context</h4>
+      <p>PSG extracts identity, role, permissions and other relevant claims from the validated token.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">8</div>
+    <div class="step-content">
+      <h4>PSG generates service authorization token</h4>
+      <p>PSG generates a service authorization JWT representing the trusted security context for the downstream service.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">9</div>
+    <div class="step-content">
+      <h4>Downstream service validates and authorizes</h4>
+      <p>The microservice validates the service token and performs service/endpoint-level authorization before executing business logic.</p>
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-number">10</div>
+    <div class="step-content">
+      <h4>Response travels back</h4>
+      <p>The business response travels back through the applicable platform layers to the consumer.</p>
+    </div>
+  </div>
+</div>
+
+<pre>
+Consumer
+   |
+   | API Request + CAT
+   v
+Akamai
+   |
+   v
+Apigee
+   |
+   +---- Validate Client / Quota / API Policies
+   |
+   +---- CAT lookup
+            |
+            v
+         Cassandra
+            |
+            v
+       Access Token
+            |
+            v
+           PSG
+            |
+            +---- Validate JWT
+            |
+            +---- Extract claims
+            |
+            +---- Apply security policies
+            |
+            +---- Generate Service Authorization Token
+                         |
+                         v
+                Downstream Service
+                         |
+                         +---- Validate token
+                         +---- Role / policy checks
+                         +---- Business processing
+                         |
+                         v
+                      Response
+                         |
+                         v
+              Apigee → Akamai → Consumer
+</pre>
+
+<h2>6. Token Model</h2>
+
+<table class="token-table">
+  <thead>
+    <tr>
+      <th>Artifact</th>
+      <th>Purpose</th>
+      <th>Where it is used</th>
+      <th>Current understanding</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>CAT</strong><br>Citi Authorization Token</td>
+      <td>External-facing opaque session/authorization identifier.</td>
+      <td>Consumer → Akamai → Apigee</td>
+      <td>Used by Apigee to resolve the internal access token.</td>
+    </tr>
+    <tr>
+      <td><strong>Access Token</strong><br>JWT</td>
+      <td>Internal security token containing identity/authorization claims.</td>
+      <td>Apigee → PSG</td>
+      <td>Validated by PSG according to the enterprise token-validation implementation.</td>
+    </tr>
+    <tr>
+      <td><strong>Service Authorization Token</strong><br>JWT</td>
+      <td>Represents the trusted security context passed to the downstream service.</td>
+      <td>PSG → Downstream Service</td>
+      <td>Used for service-level authentication/authorization.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>7. Data Stores and Supporting Services</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Component</th>
+      <th>Role in current understanding</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Cassandra</strong></td>
+      <td>Apigee-side CAT-to-access-token mapping/lookup store in the current enterprise implementation.</td>
+    </tr>
+    <tr>
+      <td><strong>MongoDB</strong></td>
+      <td>Authorization-service token/session information store; relevant to the direct PSG/token introspection scenario described so far.</td>
+    </tr>
+    <tr>
+      <td><strong>Authorization Service</strong></td>
+      <td>Token/authorization service involved in establishing CAT and access-token context.</td>
+    </tr>
+    <tr>
+      <td><strong>SSO / CCS / Login Service</strong></td>
+      <td>Authentication service used during login, depending on the authentication scenario.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>8. Direct PSG Validation Scenario</h2>
+
+<div class="flow-section">
+  <p>The current understanding also includes a scenario where a request reaches PSG without first going through Apigee.</p>
+
+<pre>
+Consumer / Caller
+       |
+       | CAT
+       v
+      PSG
+       |
+       v
+Authorization Service
+       |
+       v
+     MongoDB
+       |
+       v
+Token / session information
+</pre>
+
+  <p>The exact behavior should be refined after documenting the internal PSG implementation. In particular, distinguish between:</p>
+  <ul>
+    <li><strong>Local JWT validation</strong> — signature and claims can be validated without calling another service.</li>
+    <li><strong>Token introspection</strong> — PSG calls the authorization service to determine whether a token/session is valid or retrieve associated information.</li>
+  </ul>
+</div>
+
+<div class="note">
+  <strong>Important implementation note:</strong>
+  The CAT/Cassandra behavior, exact Apigee token handling, PSG validation mechanism and MongoDB introspection path are based on the current understanding of the enterprise implementation. They should be confirmed against the actual platform implementation before being presented as definitive product behavior.
+</div>
+
+<h2>9. Interview Perspective</h2>
+
+<div class="interview">
+  <h3 style="margin-top:0;">Recommended 1–2 minute explanation</h3>
+  <div class="quote">
+    Our external APIs follow a layered security architecture. The request first enters through Akamai, which acts as the internet-facing edge security layer providing capabilities such as WAF and DDoS protection. From Akamai, the request is routed to Apigee, which acts as our API gateway and performs API-level controls such as client validation, quota and policy enforcement.
+    <br><br>
+    For pre-login APIs such as login, Apigee forwards the request to PSG, which orchestrates authentication through the appropriate authentication service and then interacts with the authorization service to establish the user's security context. The authorization flow results in a CAT and an internal JWT access token. The CAT is returned to the consumer, while the internal access-token relationship is maintained within the platform.
+    <br><br>
+    For subsequent post-login API calls, the consumer sends the CAT. Apigee resolves the CAT to the corresponding access token and forwards the internal JWT to PSG. PSG validates the token and extracts the relevant identity and authorization claims. It then generates a service authorization token that is passed to the downstream microservice.
+    <br><br>
+    The downstream service performs its own service-level token and authorization checks before executing the business logic. This gives us defense in depth, where each layer has a clearly defined security responsibility.
+  </div>
+</div>
+
+<h3>Why are there multiple security layers?</h3>
+<p><strong>Answer:</strong> The architecture follows defense in depth and separation of concerns. Akamai protects the internet-facing boundary, Apigee handles API management and API-level policies, PSG establishes and validates the enterprise security context, and downstream services enforce service-specific authorization and business rules.</p>
+
+<h3>Why not send the JWT directly from the consumer to the microservice?</h3>
+<p><strong>Answer:</strong> In the current architecture, the consumer interacts using the CAT while the internal access token remains within the trusted platform. Apigee resolves the CAT to the internal access token, PSG validates it and establishes the downstream security context, and the service receives a service authorization token appropriate for its boundary.</p>
+
+<h3>Where does authentication happen?</h3>
+<p>Authentication is orchestrated through PSG and the applicable authentication service such as SSO/CCS/login service.</p>
+
+<h3>Where does authorization happen?</h3>
+<p>Authorization is distributed across the architecture. Apigee performs API-level policy controls, PSG establishes/validates the enterprise security context, and downstream services perform service/endpoint-level authorization.</p>
+
+<h3>Why does the downstream service validate the token again?</h3>
+<p>This provides defense in depth. The service should not blindly trust an upstream component; it validates the security context relevant to its own trust boundary before executing business operations.</p>
+
+<h2>10. Interview Questions to Prepare</h2>
+
+<ul>
+  <li>Why do you need both Akamai and Apigee?</li>
+  <li>What is the difference between WAF and API Gateway?</li>
+  <li>What is PSG responsible for?</li>
+  <li>What is CAT and why is it used?</li>
+  <li>What is the difference between CAT and access token?</li>
+  <li>Where does authentication happen?</li>
+  <li>Where does authorization happen?</li>
+  <li>How does Apigee resolve CAT to an access token?</li>
+  <li>Why is Cassandra involved?</li>
+  <li>How does PSG validate the JWT?</li>
+  <li>What is JWT signature validation?</li>
+  <li>What claims can be present in a JWT?</li>
+  <li>What is the difference between JWT validation and token introspection?</li>
+  <li>Why does PSG generate another service authorization token?</li>
+  <li>Why does the downstream service validate the token again?</li>
+  <li>What happens if Apigee is bypassed?</li>
+  <li>How are token expiration and revocation handled?</li>
+  <li>How is JWT signing-key rotation handled?</li>
+  <li>How does the architecture behave across multiple data centers/environments?</li>
+  <li>Where should business authorization rules live?</li>
+</ul>
+
+<h2>11. Five-Line Mental Model</h2>
+
+<pre>
+AKAMAI      → Protect the internet-facing edge
+APIGEE      → Protect and govern the API
+PSG         → Establish and validate trusted security context
+SERVICE JWT → Carry trusted identity/security context to the service
+MICROSERVICE→ Enforce service-level authorization and business rules
+</pre>
+
+<footer>
+  Enterprise API Security Architecture — Interview Preparation Notes<br>
+  Based on the current understanding of Akamai → Apigee → PSG → Downstream Services.
+</footer>
+
+</div>
+</body>
+</html>
